@@ -76,12 +76,15 @@
       ...mapState('user', ['user'])
     },
     beforeCreate() {
-      this.$store.dispatch('user/setUser', null);
-      UserService.getUserProfile()
+      this.$store
+              .dispatch('user/setUser', null)
+              .then(() => {
+                UserService.getUserProfile()
+              });
     },
     metaInfo() {
       return {
-        title: 'Cylc Web | User Profile'
+        title: 'Cylc UI | User Profile'
       }
     }
   }
