@@ -4,8 +4,8 @@
       <v-flex xs12 md12>
         <material-card
             color="green"
-            title="Your Profile"
-            text="This is a read-only view of your user"
+            :title="$t('UserProfile.tableHeader')"
+            :text="$t('UserProfile.tableSubHeader')"
         >
           <v-form v-if="user !== null">
             <v-container py-0>
@@ -13,7 +13,7 @@
                 <v-flex xs12 md12>
                   <v-text-field
                       :value="user.getUserName()"
-                      label="Username"
+                      :label="$t('UserProfile.username')"
                       disabled
                       aria-disabled="true"
                   />
@@ -23,7 +23,7 @@
                 <v-flex xs12 md12>
                   <v-checkbox
                       v-model="user.admin"
-                      label="Administrator"
+                      :label="$t('UserProfile.administrator')"
                       disabled
                       aria-disabled="true"
                   />
@@ -37,7 +37,7 @@
                   <v-select
                       :items="user.getGroups()"
                       v-model="user.groups"
-                      label="Groups"
+                      :label="$t('UserProfile.groups')"
                       attach
                       chips
                       multiple
@@ -53,7 +53,7 @@
                 >
                   <v-text-field
                       :value="user.getCreated()"
-                      label="Created"
+                      :label="$t('UserProfile.created')"
                       disabled
                       aria-disabled="true"
                   />
@@ -69,23 +69,26 @@
 </template>
 
 <script>
-  import { UserService } from '@/services/user.service'
-  import { mapState } from 'vuex';
-  export default {
-    computed: {
-      ...mapState('user', ['user'])
-    },
-    beforeCreate() {
-      this.$store
-              .dispatch('user/setUser', null)
-              .then(() => {
-                UserService.getUserProfile()
-              });
-    },
-    metaInfo() {
-      return {
-        title: 'Cylc UI | User Profile'
-      }
+import { UserService } from '@/services/user.service'
+import { mapState } from 'vuex'
+import { mixin } from '@/mixins/index'
+
+export default {
+  mixins: [mixin],
+  computed: {
+    ...mapState('user', ['user'])
+  },
+  beforeCreate () {
+    this.$store
+      .dispatch('user/setUser', null)
+      .then(() => {
+        UserService.getUserProfile()
+      })
+  },
+  metaInfo () {
+    return {
+      title: this.getPageTitle('App.userProfile')
     }
   }
+}
 </script>

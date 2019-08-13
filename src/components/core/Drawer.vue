@@ -3,32 +3,17 @@
     id="app-drawer"
     v-model="inputValue"
     app
-    dark
-    floating
     persistent
     mobile-break-point="991"
     width="260"
+    clipped
   >
     <v-layout
       class="fill-height"
       tag="v-list"
       column
     >
-      <v-list-tile avatar>
-        <v-list-tile-avatar
-          color="white"
-        >
-          <v-img
-            :src="logo"
-            height="34"
-            contain
-          />
-        </v-list-tile-avatar>
-        <v-list-tile-title class="title">
-          Cylc UI
-        </v-list-tile-title>
-      </v-list-tile>
-      <v-divider/>
+      <c-header />
       <v-list-tile
         v-if="responsive"
       >
@@ -38,9 +23,22 @@
           color="purple"
         />
       </v-list-tile>
+
       <v-list-tile
-        v-for="(link, i) in links"
-        :key="i"
+          to="/dashboard"
+          :active-class="color"
+          avatar
+          class="v-list-item"
+      >
+        <v-list-tile-action>
+          <v-icon>mdi-home</v-icon>
+        </v-list-tile-action>
+        <v-list-tile-title>Dashboard</v-list-tile-title>
+      </v-list-tile>
+      <v-subheader>Views</v-subheader>
+      <v-list-tile
+        v-for="(link, index) in viewLinks"
+        :key="index+link.text"
         :to="link.to"
         :active-class="color"
         avatar
@@ -53,17 +51,6 @@
           v-text="link.text"
         />
       </v-list-tile>
-      <v-list-tile
-              href="/hub/home"
-              :active-class="color"
-              avatar
-              class="v-list-item"
-      >
-        <v-list-tile-action>
-          <v-icon>mdi-server-network</v-icon>
-        </v-list-tile-action>
-        <v-list-tile-title>Hub</v-list-tile-title>
-      </v-list-tile>
     </v-layout>
   </v-navigation-drawer>
 </template>
@@ -74,30 +61,32 @@ import {
   mapMutations,
   mapState
 } from 'vuex'
+import Header from '@/components/cylc/Header'
+import i18n from '@/i18n'
 
 export default {
+  components: {
+    'c-header': Header
+  },
   data: () => ({
-    logo: './img/logo.png',
     links: [
       {
-        to: '/dashboard',
+        to: '/',
         icon: 'mdi-view-dashboard',
-        text: 'Dashboard'
+        text: i18n.t('App.dashboard'),
+        view: false
       },
       {
-        to: '/suites',
+        to: '/workflows',
         icon: 'mdi-vector-circle',
-        text: 'Suites'
+        text: i18n.t('App.workflows'),
+        view: true
       },
       {
-        to: '/user-profile',
-        icon: 'mdi-account',
-        text: 'User Profile'
-      },
-      {
-        to: '/login',
-        icon: 'mdi-account',
-        text: 'Log in'
+        to: '/graph',
+        icon: 'mdi-vector-polyline',
+        text: i18n.t('App.graph'),
+        view: true
       }
     ],
     responsive: false
@@ -111,6 +100,12 @@ export default {
       set (val) {
         this.setDrawer(val)
       }
+    },
+    viewLinks: function () {
+      return this.isView(true)
+    },
+    nonViewLinks: function () {
+      return this.isView(false)
     },
     items () {
       return this.$t('Layout.View.items')
@@ -131,24 +126,34 @@ export default {
       } else {
         this.responsive = false
       }
+    },
+    isView (bool) {
+      // return links to views for true argument, non-views for false argument
+      return this.links.filter(function (u) {
+        return u.view === bool
+      })
     }
   }
 }
 </script>
 
 <style lang="scss">
+  @import "../../styles/material-dashboard/colors";
+
   #app-drawer {
     .v-list__tile {
       border-radius: 4px;
+        margin-top: 5px;
 
       &--buy {
         margin-top: auto;
-        margin-bottom: 17px;
+        margin-bottom: auto;
       }
     }
 
     .v-image__image--contain {
-      top: 9px;
+      top: 30px;
+      bottom: 30px;
       height: 60%;
     }
 
@@ -157,5 +162,12 @@ export default {
       padding-left: 15px;
       padding-right: 15px;
     }
+  }
+
+  /* this is not in our styles/material-dashboard, so we need to force-override */
+  .v-navigation-drawer {
+    -webkit-box-shadow: none !important;
+    box-shadow: none !important;
+    border-right: 2px solid $grey-300;
   }
 </style>

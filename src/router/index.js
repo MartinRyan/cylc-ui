@@ -30,7 +30,7 @@ function route (path, view, name, meta, alias) {
   }
 }
 
-Vue.use(Router);
+Vue.use(Router)
 
 // Create a new router
 const router = new Router({
@@ -46,20 +46,27 @@ const router = new Router({
     }
     return { x: 0, y: 0 }
   }
-});
+})
 
-Vue.use(Meta);
+Vue.use(Meta)
 
 router.beforeResolve((to, from, next) => {
   if (to.name) {
-    NProgress.start();
-    store.dispatch('clearAlerts');
+    if (['Tree', 'Graph'].indexOf(to.name) !== -1) {
+      // When a workflow is being displayed, we set the title to a
+      // different value.
+      store.commit('app/setTitle', to.params.name)
+    } else {
+      store.commit('app/setTitle', to.name)
+    }
+    NProgress.start()
+    store.dispatch('setAlert', null)
   }
-  next();
-});
+  next()
+})
 
 router.afterEach(() => {
-  NProgress.done();
-});
+  NProgress.done()
+})
 
 export default router

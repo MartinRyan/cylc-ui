@@ -1,9 +1,19 @@
 // optional file, loaded automatically by @vue/cli-service if present next to package.json
+var webpack = require('webpack')
 
 module.exports = {
   publicPath: '',
   outputDir: 'dist',
   indexPath: 'index.html',
+  configureWebpack: {
+    plugins: [
+      new webpack.DefinePlugin({
+        'process.env': {
+          PACKAGE_JSON: '"' + escape(JSON.stringify(require('./package.json'))) + '"'
+        }
+      })
+    ]
+  },
   chainWebpack: config => {
     if (process.env.NODE_ENV !== 'production') {
       config.module.rule('js')
@@ -20,9 +30,9 @@ module.exports = {
     }
 
     // set up aliases for mock services, used when the offline mode is used
-    const suiteService = process.env.NODE_ENV === 'offline'
-      ? '@/services/mock/suite.service'
-      : '@/services/suite.service'
-    config.resolve.alias.set('suite-service', suiteService)
+    const workflowService = process.env.NODE_ENV === 'offline'
+      ? '@/services/mock/workflow.service.mock'
+      : '@/services/workflow.service'
+    config.resolve.alias.set('workflow-service', workflowService)
   }
 }

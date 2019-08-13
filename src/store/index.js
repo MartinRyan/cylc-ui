@@ -10,81 +10,63 @@
 import Vue from 'vue'
 import Vuex from 'vuex'
 // Modules
-import {app} from './app.module'
-import {suites} from './suites.module'
-import {user} from './user.module'
+import { app } from './app.module'
+import { workflows } from './workflows.module'
+import { user } from './user.module'
 
 // State
 const state = {
   packageJson: JSON.parse(unescape(process.env.PACKAGE_JSON || '%7B%7D')),
+  environment: process.env.NODE_ENV.toUpperCase(),
   isLoading: false,
   refCount: 0,
-  alerts: []
-};
+  alert: null
+}
 
 // Actions
 const actions = {
-  setLoading({commit}, isLoading) {
-    commit('SET_LOADING', isLoading);
+  setLoading ({ commit }, isLoading) {
+    commit('SET_LOADING', isLoading)
   },
-  addAlert({commit}, alert) {
-    commit('ADD_ALERT', alert);
-  },
-  removeAlert({commit}, alertText) {
-    commit('REMOVE_ALERT', alertText);
-  },
-  clearAlerts({commit}) {
-    commit('CLEAR_ALERTS');
+  setAlert ({ state, commit }, alert) {
+    // log to console when the alert is not null (null can mean to remove the alert)
+    if (alert !== null) {
+      console.log(alert)
+    }
+    if (alert === null || state.alert === null || state.alert.getText() !== alert.getText()) {
+      commit('SET_ALERT', alert)
+    }
   }
-};
+}
 
 // Mutations
 const mutations = {
-  SET_LOADING(state, isLoading) {
+  SET_LOADING (state, isLoading) {
     if (isLoading) {
-      state.refCount++;
+      state.refCount++
       state.isLoading = isLoading
     } else if (state.refCount > 0) {
-      state.refCount--;
+      state.refCount--
       state.isLoading = (state.refCount > 0)
     }
   },
-  ADD_ALERT(state, alert) {
-    state.alerts.push(alert);
-  },
-  REMOVE_ALERT(state, alertText) {
-    for (var i = 0; i < state.alerts.length; i++) {
-      if (state.alerts[i].text === alertText) {
-        state.alerts.splice(i, 1);
-        break;
-      }
-    }
-  },
-  CLEAR_ALERTS(state) {
-    state.alerts = []
+  SET_ALERT (state, alert) {
+    state.alert = alert
   }
-};
+}
 
-// Getters
-const getters = {
-  appVersion: (state) => {
-    return state.packageJson.version
-  }
-};
-
-Vue.use(Vuex);
+Vue.use(Vuex)
 
 // Create a new store
 const store = new Vuex.Store({
   modules: {
     app,
-    suites,
+    workflows,
     user
   },
   actions,
-  getters,
   mutations,
   state
-});
+})
 
 export default store

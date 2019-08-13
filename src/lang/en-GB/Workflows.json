@@ -1,0 +1,9 @@
+{
+  "tableHeader": "List of Workflows",
+  "tableSubHeader": "This is the list of workflows the current user has access to",
+  "tableColumnName": "Name",
+  "tableColumnOwner": "Owner",
+  "tableColumnHost": "Host",
+  "tableColumnPort": "Port",
+  "tableColumnActions": "Actions"
+}
