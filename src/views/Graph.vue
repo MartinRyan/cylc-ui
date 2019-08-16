@@ -6,6 +6,7 @@
   <div id='holder'>
     <SyncLoader :loading='loading' :color='color' :size='size' class='spinner'></SyncLoader>
     <div class='switchlayout'>
+      <v-btn id='test-button' name='dagre' align-center justify-center :depressed='true' class='dagre-button'>TEST</v-btn>
       <v-btn id='dagre-button' name='dagre' align-center justify-center :depressed='true' class='dagre-button'>DAGRE</v-btn>
       <v-btn id='cosebilkent-button' name='cose-bilkent' align-center justify-center :depressed='true' class='cosebilkent-button'>COSE-BILKENT</v-btn>
       <v-btn id='klay-button' align-center justify-center :depressed='true' class='klay-button'>KLAY</v-btn>
@@ -43,12 +44,19 @@ import VueCytoscape from '@/components/core/Cytoscape.vue'
 import { mixin } from '@/mixins/index'
 
 const DATA_URL = 'simple-cytoscape-dot.7.js'
+const DATA_URL2 = 'simple-cytoscape-dot.7.alt.js'
+const graphData = {
+  nodes: ['test'],
+  edges: ['test']
+}
+
 let ur = {}
 // eslint-disable-next-line no-unused-vars
-const loading = true
+
 let layoutOptions = {}
 let expandCollapseOptions = {}
 let tippy
+const elements = []
 
 const nodeOptions = {
   normal: {
@@ -70,9 +78,27 @@ var edgeOptions = {
     lineColor: 'yellow'
   }
 }
+const config = {}
 
 export default {
   name: 'Graph',
+  data () {
+    return {
+      config,
+      elements,
+      graphData: graphData,
+      i: 1,
+      // vue-spinner
+      color: '#5e9aff',
+      height: '35px',
+      width: '4px',
+      margin: '2px',
+      radius: '2px',
+      size: '1em',
+      loading: true,
+      status: 'pending'
+    }
+  },
   mixins: [mixin],
   metaInfo () {
     // TODO: once the component is using live data, use the workflow name here
@@ -92,20 +118,31 @@ export default {
     SyncLoader,
     cytoscape: VueCytoscape
   },
-  data () {
-    return {
-      i: 1,
-      // vue-spinner
-      color: '#5e9aff',
-      height: '35px',
-      width: '4px',
-      margin: '2px',
-      radius: '2px',
-      size: '1em',
-      loading: true
+  mounted () {
+    console.log(`MOUNTED called, status: ${this.status}`)
+    this.handleMounted()
+  },
+  watch: {
+    // TODO https://vuejs.org/v2/api/#watch
+    status (newValue, oldValue) {
+      console.log(`Updating from ${oldValue} to ${newValue}`)
+      // Do whatever makes sense now
+      if (newValue === 'success') {
+        this.complex = {
+          deep: 'some deep object'
+        }
+      }
     }
   },
   methods: {
+    async handleMounted () {
+      try {
+        this.status = 'success'
+      } catch (error) {
+        console.error('handleMounted error: ', error)
+        this.status = 'error'
+      }
+    },
     preConfig (cytoscape) {
       // cytoscape: this is the cytoscape constructor
       cytoscape.use(cola)
@@ -277,30 +314,65 @@ export default {
       }
 
       async function registerExtensions (instance) {
-        // register extensions
-        if (typeof cytoscape('core', 'navigator') !== 'function') {
-          console.log('registering navigator')
-          navigator(cytoscape)
-        }
+        try {
+          // register extensions
+          if (typeof cytoscape('core', 'navigator') !== 'function') {
+            console.log('registering navigator')
+            navigator(cytoscape)
+          }
 
-        if (typeof cytoscape('core', 'panzoom') !== 'function') {
-          console.log('registering panzoom')
-          panzoom(cytoscape)
-        }
+          if (typeof cytoscape('core', 'panzoom') !== 'function') {
+            console.log('registering panzoom')
+            panzoom(cytoscape)
+          }
 
-        if (typeof cytoscape('core', 'undoRedo') !== 'function') {
-          console.log('registering undoRedo')
-          undoRedo(cytoscape)
-        }
+          if (typeof cytoscape('core', 'undoRedo') !== 'function') {
+            console.log('registering undoRedo')
+            undoRedo(cytoscape)
+          }
 
-        if (typeof cytoscape('core', 'expandCollapse') !== 'function') {
-          console.log('registering expandCollapse with jquery')
-          expandCollapse(cytoscape, jquery)
-        }
+          if (typeof cytoscape('core', 'expandCollapse') !== 'function') {
+            console.log('registering expandCollapse with jquery')
+            expandCollapse(cytoscape, jquery)
+          }
 
-        if (typeof cytoscape('core', 'popper') !== 'function') {
-          console.log('registering popper')
-          popper(cytoscape)
+          if (typeof cytoscape('core', 'popper') !== 'function') {
+            console.log('registering popper')
+            popper(cytoscape)
+          }
+        } catch (error) {
+          console.log('registerExtensions error', error)
+        }
+      }
+
+      async function updateGraph (cy) {
+        try {
+          console.log('<|=== updateGraph ===|> ')
+          const data2 = await updateData2()
+          console.log('updateGraph cy.data.elements data2 ===|>', cy.data.elements)
+          cy.data.elements = data2
+          console.log('cy.data.elements ===|>', cy.data.elements)
+          const { data: elements } = cy.data.elements
+          const stylesheet2 = await updateStyle()
+          cy.style(stylesheet2.style).update()
+          cy.json({ elements: elements })
+          console.log('stylesheet2 ===|>', stylesheet2)
+          getPanzoom(cy)
+          getNavigator(cy)
+          getUndoRedo(cy)
+          layoutOptions = dagreOptions
+          cy = await getGraph(cy)
+          // let returnObject = await getGraph(cy)
+          // cy = returnObject.cy
+          // ur = returnObject.ur
+          const api = cy.expandCollapse('get')
+          cy.expandCollapse(expandCollapseOptions)
+          api.collapseAll()
+          cy.elements()
+            .layout(layoutOptions)
+            .run()
+        } catch (error) {
+          console.log('updateGraph error: ', error)
         }
       }
 
@@ -309,7 +381,17 @@ export default {
           const data = await axios.get(DATA_URL)
           return data
         } catch (error) {
-          console.log('error', error)
+          console.log('updateData error: ', error)
+        }
+      }
+
+      async function updateData2 () {
+        try {
+          console.log('update data 2')
+          const data = await axios.get(DATA_URL2)
+          return data
+        } catch (error) {
+          console.log('updateData2 error: ', error)
         }
       }
 
@@ -318,7 +400,7 @@ export default {
           const data = await updateData()
           return updateConfig(data)
         } catch (error) {
-          console.log('error', error)
+          console.log('updateStyle error: ', error)
         }
       }
 
@@ -487,7 +569,7 @@ export default {
 
           return config
         } catch (error) {
-          console.log('error', error)
+          console.log('config error: ', error)
         }
       }
 
@@ -501,70 +583,91 @@ export default {
             .run()
           return cy
         } catch (error) {
-          console.log('error', error)
+          console.log('runlayout error: ', error)
         }
       }
 
       async function setupUndo (instance) {
-        const cy = instance
-        const ur = cy.undoRedo()
-        cy.expandCollapse(expandCollapseOptions)
-        const api = cy.expandCollapse('get')
-        api.collapseAll()
-        layoutOptions = dagreOptions
-        return ur
+        try {
+          const cy = instance
+          const ur = cy.undoRedo()
+          cy.expandCollapse(expandCollapseOptions)
+          const api = cy.expandCollapse('get')
+          api.collapseAll()
+          layoutOptions = dagreOptions
+          return ur
+        } catch (error) {
+          console.log('setupUndo error', error)
+        }
       }
 
       async function getGraph (instance) {
-        await registerExtensions()
-        layoutOptions = dagreOptions
-        const cy = await runlayout(instance)
-        const ur = await setupUndo(cy)
-        getPanzoom(cy)
-        getNavigator(cy)
-        getUndoRedo(cy)
-        cy.expandCollapse(expandCollapseOptions)
-        const api = cy.expandCollapse('get')
-        api.collapseAll()
-        return ur
+        try {
+          await registerExtensions()
+          layoutOptions = dagreOptions
+          const cy = await runlayout(instance)
+          ur = await setupUndo(cy)
+          getPanzoom(cy)
+          getNavigator(cy)
+          getUndoRedo(cy)
+          const api = cy.expandCollapse('get')
+          cy.expandCollapse(expandCollapseOptions)
+          api.collapseAll()
+          return cy
+        } catch (error) {
+          console.log('getGraph error', error)
+        }
       }
 
+      async function render (cy) {
+        try {
+          const { data: elements } = await updateData()
+          const stylesheet = await updateStyle()
+          cy.json({
+            elements: elements,
+            style: stylesheet.style
+          })
+          cy = await getGraph(cy)
+          cy.elements()
+            .layout(layoutOptions)
+            .run()
+          return true
+        } catch (error) {
+          console.log('render error', error)
+        }
+      }
       // load graph data and run layout
-      const { data: elements } = await updateData()
-      const stylesheet = await updateStyle()
-      cy = await cytoscape({
-        container: document.getElementById('cytoscape'),
-        elements: elements,
-        style: stylesheet.style
-      })
-      ur = await getGraph(cy)
-      console.log('loaded elements: ', elements, cy)
-      this.loading = false // remove spinner
+      const loaded = await render(cy)
+      loaded ? this.loading = false : console.log('there was an error loading the graph view')
       // ----------------------------------------
 
       function getPanzoom () {
-        const panzoomdefaults = {
-          zoomFactor: 0.1, // zoom factor per zoom tick
-          zoomDelay: 45, // how many ms between zoom ticks
-          minZoom: 0.1, // min zoom level
-          maxZoom: 10, // max zoom level
-          fitPadding: 50, // padding when fitting
-          panSpeed: 10, // how many ms in between pan ticks
-          panDistance: 100, // max pan distance per tick
-          panDragAreaSize: 75, // the length of the pan drag box in which the vector for panning is calculated (bigger = finer control of pan speed and direction)
-          panMinPercentSpeed: 0.25, // the slowest speed we can pan by (as a percent of panSpeed)
-          panInactiveArea: 8, // radius of inactive area in pan drag box
-          panIndicatorMinOpacity: 0.5, // min opacity of pan indicator (the draggable nib) scales from this to 1.0
-          zoomOnly: false, // a minimal version of the ui only with zooming (useful on systems with bad mousewheel resolution)
-          fitSelector: undefined, // selector of elements to fit
-          animateOnFit: function () {
-            // whether to animate on fit
-            return false
-          },
-          fitAnimationDuration: 1000 // duration of animation on fit
+        try {
+          const panzoomdefaults = {
+            zoomFactor: 0.1, // zoom factor per zoom tick
+            zoomDelay: 45, // how many ms between zoom ticks
+            minZoom: 0.1, // min zoom level
+            maxZoom: 10, // max zoom level
+            fitPadding: 50, // padding when fitting
+            panSpeed: 10, // how many ms in between pan ticks
+            panDistance: 100, // max pan distance per tick
+            panDragAreaSize: 75, // the length of the pan drag box in which the vector for panning is calculated (bigger = finer control of pan speed and direction)
+            panMinPercentSpeed: 0.25, // the slowest speed we can pan by (as a percent of panSpeed)
+            panInactiveArea: 8, // radius of inactive area in pan drag box
+            panIndicatorMinOpacity: 0.5, // min opacity of pan indicator (the draggable nib) scales from this to 1.0
+            zoomOnly: false, // a minimal version of the ui only with zooming (useful on systems with bad mousewheel resolution)
+            fitSelector: undefined, // selector of elements to fit
+            animateOnFit: function () {
+              // whether to animate on fit
+              return false
+            },
+            fitAnimationDuration: 1000 // duration of animation on fit
+          }
+          cy.panzoom(panzoomdefaults)
+          return cy.panzoom
+        } catch (error) {
+          console.log('getPanzoom error', error)
         }
-        cy.panzoom(panzoomdefaults)
-        return cy.panzoom
       }
       // hierarchical clustering internal needs cy instance
       // eslint-disable-next-line no-unused-vars
@@ -584,31 +687,39 @@ export default {
       })
 
       function getNavigator (cy) {
-        cy.navigator({
-          container: '.cytoscape-navigator-overlay',
-          viewLiveFramerate: 0, // set false to update graph pan only on drag end set 0 to do it instantly set a number (frames per second) to update not more than N times per second
-          thumbnailEventFramerate: 30, // max thumbnail's updates per second triggered by graph updates
-          thumbnailLiveFramerate: false, // max thumbnail's updates per second. Set false to disable
-          dblClickDelay: 200, // milliseconds
-          removeCustomContainer: true, // destroy the container specified by user on plugin destroy
-          rerenderDelay: 100 // ms to throttle rerender updates to the panzoom for performance
-        })
-        return cy.navigator
+        try {
+          cy.navigator({
+            container: '.cytoscape-navigator-overlay',
+            viewLiveFramerate: 0, // set false to update graph pan only on drag end set 0 to do it instantly set a number (frames per second) to update not more than N times per second
+            thumbnailEventFramerate: 30, // max thumbnail's updates per second triggered by graph updates
+            thumbnailLiveFramerate: false, // max thumbnail's updates per second. Set false to disable
+            dblClickDelay: 200, // milliseconds
+            removeCustomContainer: true, // destroy the container specified by user on plugin destroy
+            rerenderDelay: 100 // ms to throttle rerender updates to the panzoom for performance
+          })
+          return cy.navigator
+        } catch (error) {
+          console.log('getPanzoom error', error)
+        }
       }
 
       function getUndoRedo (cy) {
-        const undoRedoOptions = {
-          isDebug: true, // Debug mode for console messages
-          actions: {}, // actions to be added
-          undoableDrag: true, // Whether dragging nodes are undoable can be a function as well
-          stackSizeLimit: undefined, // Size limit of undo stack, note that the size of redo stack cannot exceed size of undo stack
-          ready: function () {
-            // callback when undo-redo is ready
-            this.loading = false // add spinner
+        try {
+          const undoRedoOptions = {
+            isDebug: true, // Debug mode for console messages
+            actions: {}, // actions to be added
+            undoableDrag: true, // Whether dragging nodes are undoable can be a function as well
+            stackSizeLimit: undefined, // Size limit of undo stack, note that the size of redo stack cannot exceed size of undo stack
+            ready: function () {
+              // callback when undo-redo is ready
+              this.loading = false // add spinner
+            }
           }
+          cy.undoRedo(undoRedoOptions)
+          return cy.undoRedo
+        } catch (error) {
+          console.log('getUndoRedo error', error)
         }
-        cy.undoRedo(undoRedoOptions)
-        return cy.undoRedo
       }
 
       // eslint-disable-next-line no-unused-vars
@@ -862,6 +973,14 @@ export default {
       }
 
       document
+        .getElementById('test-button')
+        // eslint-disable-next-line no-unused-vars
+        .addEventListener('click', function (event) {
+          console.log('click test  ===||')
+          updateGraph(cy)
+        })
+
+      document
         .getElementById('dagre-button')
         // eslint-disable-next-line no-unused-vars
         .addEventListener('click', function (event) {
@@ -869,9 +988,6 @@ export default {
           expandCollapseOptions = expandCollapseOptionsUndefined
           cy.expandCollapse(expandCollapseOptionsUndefined)
           ur.do('collapseAll')
-          cy.elements()
-            .layout(klayLayoutOptions)
-            .run()
           cy.elements()
             .layout(dagreOptions)
             .run()
