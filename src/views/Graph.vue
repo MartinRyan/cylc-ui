@@ -50,9 +50,8 @@ const graphData = {
   edges: ['test']
 }
 
-let ur = {}
 // eslint-disable-next-line no-unused-vars
-
+let ur = {}
 let layoutOptions = {}
 let expandCollapseOptions = {}
 let tippy
@@ -184,11 +183,11 @@ export default {
         stop: function () {}, // Called on `layoutstop`
         nodeDimensionsIncludeLabels: false, // Whether to include labels in node dimensions. Useful for avoiding label overlap
         refresh: 30, // number of ticks per frame higher is faster but more jerky
-        fit: true, // Whether to fit the network view after when done
+        fit: false, // Whether to fit the network view after when done
         padding: 10, // Padding on fit
         randomize: true, // Whether to enable incremental mode
         nodeRepulsion: 4500, // Node repulsion (non overlapping) multiplier
-        idealEdgeLength: 50, // Ideal (intra-graph) edge length
+        idealEdgeLength: 150, // Ideal (intra-graph) edge length
         edgeElasticity: 0.45, // Divisor to compute edge forces
         nestingFactor: 0.1, // Nesting factor (multiplier) to compute ideal edge length for inter-graph edges
         gravity: 0.25, // Gravity force (constant)
@@ -342,37 +341,6 @@ export default {
           }
         } catch (error) {
           console.log('registerExtensions error', error)
-        }
-      }
-
-      async function updateGraph (cy) {
-        try {
-          console.log('<|=== updateGraph ===|> ')
-          const data2 = await updateData2()
-          console.log('updateGraph cy.data.elements data2 ===|>', cy.data.elements)
-          cy.data.elements = data2
-          console.log('cy.data.elements ===|>', cy.data.elements)
-          const { data: elements } = cy.data.elements
-          const stylesheet2 = await updateStyle()
-          cy.style(stylesheet2.style).update()
-          cy.json({ elements: elements })
-          console.log('stylesheet2 ===|>', stylesheet2)
-          getPanzoom(cy)
-          getNavigator(cy)
-          getUndoRedo(cy)
-          layoutOptions = dagreOptions
-          cy = await getGraph(cy)
-          // let returnObject = await getGraph(cy)
-          // cy = returnObject.cy
-          // ur = returnObject.ur
-          const api = cy.expandCollapse('get')
-          cy.expandCollapse(expandCollapseOptions)
-          api.collapseAll()
-          cy.elements()
-            .layout(layoutOptions)
-            .run()
-        } catch (error) {
-          console.log('updateGraph error: ', error)
         }
       }
 
@@ -589,37 +557,24 @@ export default {
 
       async function setupUndo (instance) {
         try {
-          const cy = instance
-          const ur = cy.undoRedo()
-          cy.expandCollapse(expandCollapseOptions)
-          const api = cy.expandCollapse('get')
-          api.collapseAll()
-          layoutOptions = dagreOptions
+          ur = instance.undoRedo()
           return ur
         } catch (error) {
           console.log('setupUndo error', error)
         }
       }
 
-      async function getGraph (instance) {
+      async function setupExpandCollapse (instance) {
         try {
-          await registerExtensions()
+          instance.expandCollapse(expandCollapseOptions)
           layoutOptions = dagreOptions
-          const cy = await runlayout(instance)
-          ur = await setupUndo(cy)
-          getPanzoom(cy)
-          getNavigator(cy)
-          getUndoRedo(cy)
-          const api = cy.expandCollapse('get')
-          cy.expandCollapse(expandCollapseOptions)
-          api.collapseAll()
-          return cy
+          return instance
         } catch (error) {
-          console.log('getGraph error', error)
+          console.log('setupExpandCollapse error', error)
         }
       }
 
-      async function render (cy) {
+      async function initialise (cy) {
         try {
           const { data: elements } = await updateData()
           const stylesheet = await updateStyle()
@@ -628,18 +583,53 @@ export default {
             style: stylesheet.style
           })
           cy = await getGraph(cy)
-          cy.elements()
-            .layout(layoutOptions)
-            .run()
           return true
         } catch (error) {
-          console.log('render error', error)
+          console.log('initialise error', error)
         }
       }
       // load graph data and run layout
-      const loaded = await render(cy)
+      const loaded = await initialise(cy)
       loaded ? this.loading = false : console.log('there was an error loading the graph view')
       // ----------------------------------------
+
+      async function getGraph (instance) {
+        try {
+          await registerExtensions()
+          layoutOptions = dagreOptions
+          let cy = await runlayout(instance)
+          ur = await setupUndo(cy)
+          cy = await setupExpandCollapse(cy)
+          getPanzoom(cy)
+          getNavigator(cy)
+          getUndoRedo(cy)
+          return cy
+        } catch (error) {
+          console.log('getGraph error', error)
+        }
+      }
+
+      async function updateGraph (instance) {
+        try {
+          if (tippy) {
+            tippy.hide()
+          }
+          let cy = instance
+          const data2 = await updateData2()
+          cy.data.elements = data2
+          const { data: elements } = data2
+          const stylesheet = await updateStyle()
+          cy.json({
+            elements: elements,
+            style: stylesheet.style
+          })
+          console.log('stylesheet ===|>', stylesheet)
+          cy = await runlayout(cy)
+          return cy
+        } catch (error) {
+          console.log('updateGraph error: ', error)
+        }
+      }
 
       function getPanzoom () {
         try {
@@ -730,6 +720,18 @@ export default {
         popper: undefined,
         closeOnClickOutside: true
       }
+
+      cy.nodes().on('expandcollapse.beforecollapse', (event) => {
+        if (tippy) {
+          tippy.hide()
+        }
+      })
+
+      cy.nodes().on('expandcollapse.beforeexpand', (event) => {
+        if (tippy) {
+          tippy.hide()
+        }
+      })
 
       cy.on('tap', 'node', function (event) {
         const node = event.target
@@ -918,7 +920,7 @@ export default {
         },
         // recommended usage: use cose-bilkent layout with randomize: false to preserve mental map upon expand/collapse
         fisheye: true, // whether to perform fisheye view after expand/collapse you can specify a function too
-        animate: false, // whether to animate on drawing changes you can specify a function too
+        animate: true, // whether to animate on drawing changes you can specify a function too
         ready: function () {}, // callback when expand/collapse initialized
         undoable: true, // and if undoRedoExtension exists,
         cueEnabled: true, // Whether cues are enabled
@@ -976,7 +978,6 @@ export default {
         .getElementById('test-button')
         // eslint-disable-next-line no-unused-vars
         .addEventListener('click', function (event) {
-          console.log('click test  ===||')
           updateGraph(cy)
         })
 
@@ -987,7 +988,6 @@ export default {
           layoutOptions = dagreOptions
           expandCollapseOptions = expandCollapseOptionsUndefined
           cy.expandCollapse(expandCollapseOptionsUndefined)
-          ur.do('collapseAll')
           cy.elements()
             .layout(dagreOptions)
             .run()
@@ -1000,7 +1000,6 @@ export default {
           expandCollapseOptions = expandCollapseOptionsCoseBilkent
           cy.expandCollapse(expandCollapseOptionsCoseBilkent)
           layoutOptions = coseBilkentOptions
-          ur.do('collapseAll')
           cy.elements()
             .layout(coseBilkentOptions)
             .run()
@@ -1013,7 +1012,6 @@ export default {
           expandCollapseOptions = expandCollapseOptionsKlay
           cy.expandCollapse(expandCollapseOptionsKlay)
           layoutOptions = klayLayoutOptions
-          ur.do('collapseAll')
           cy.elements()
             .layout(klayLayoutOptions)
             .run()
@@ -1037,7 +1035,6 @@ export default {
               }
             ]
           })
-          ur.do('collapseAll')
           cy.elements()
             .layout(klayLayoutOptions)
             .run()
@@ -1050,7 +1047,6 @@ export default {
           expandCollapseOptions = expandCollapseOptionsCola
           cy.expandCollapse(expandCollapseOptionsCola)
           layoutOptions = colaLayoutOptions
-          ur.do('collapseAll')
           cy.elements()
             .layout(colaLayoutOptions)
             .run()
@@ -1058,11 +1054,15 @@ export default {
 
       document
         .getElementById('collapseAll')
-        .addEventListener('click', function () {
-          ur.do('collapseAll')
+        .addEventListener('click', (event) => {
+          const api = cy.expandCollapse('get')
+          api.collapseRecursively(cy.nodes(), expandCollapseOptions)
           cy.elements().removeClass('semitransp')
           cy.elements().removeClass('highlight')
           cy.elements().removeClass('selected')
+          cy.elements()
+            .layout(layoutOptions)
+            .run()
         })
 
       document.addEventListener(
