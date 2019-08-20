@@ -50,7 +50,6 @@ const graphData = {
   edges: ['test']
 }
 
-// eslint-disable-next-line no-unused-vars
 let ur = {}
 let layoutOptions = {}
 let expandCollapseOptions = {}
@@ -564,11 +563,11 @@ export default {
         }
       }
 
-      async function setupExpandCollapse (instance) {
+      async function setupExpandCollapse (cy) {
         try {
-          instance.expandCollapse(expandCollapseOptions)
+          cy.expandCollapse(expandCollapseOptions)
           layoutOptions = dagreOptions
-          return instance
+          return cy
         } catch (error) {
           console.log('setupExpandCollapse error', error)
         }
@@ -598,11 +597,13 @@ export default {
           await registerExtensions()
           layoutOptions = dagreOptions
           let cy = await runlayout(instance)
-          ur = await setupUndo(cy)
           cy = await setupExpandCollapse(cy)
+          ur = await setupUndo(cy)
           getPanzoom(cy)
           getNavigator(cy)
           getUndoRedo(cy)
+          const api = cy.expandCollapse('get')
+          api.collapseRecursively(cy.nodes(), expandCollapseOptions)
           return cy
         } catch (error) {
           console.log('getGraph error', error)
@@ -614,7 +615,7 @@ export default {
           if (tippy) {
             tippy.hide()
           }
-          let cy = instance
+          const cy = instance
           const data2 = await updateData2()
           cy.data.elements = data2
           const { data: elements } = data2
@@ -624,7 +625,6 @@ export default {
             style: stylesheet.style
           })
           console.log('stylesheet ===|>', stylesheet)
-          cy = await runlayout(cy)
           return cy
         } catch (error) {
           console.log('updateGraph error: ', error)
@@ -702,7 +702,7 @@ export default {
             stackSizeLimit: undefined, // Size limit of undo stack, note that the size of redo stack cannot exceed size of undo stack
             ready: function () {
               // callback when undo-redo is ready
-              this.loading = false // add spinner
+              this.loading = false
             }
           }
           cy.undoRedo(undoRedoOptions)
@@ -916,7 +916,7 @@ export default {
           name: 'cose-bilkent',
           animate: 'end',
           randomize: false,
-          fit: true
+          fit: false
         },
         // recommended usage: use cose-bilkent layout with randomize: false to preserve mental map upon expand/collapse
         fisheye: true, // whether to perform fisheye view after expand/collapse you can specify a function too
@@ -937,7 +937,7 @@ export default {
           name: 'cose-bilkent',
           animate: 'end',
           randomize: false,
-          fit: true
+          fit: false
         },
         // recommended usage: use cose-bilkent layout with randomize: false to preserve mental map upon expand/collapse
         fisheye: true, // whether to perform fisheye view after expand/collapse you can specify a function too
@@ -978,6 +978,8 @@ export default {
         .getElementById('test-button')
         // eslint-disable-next-line no-unused-vars
         .addEventListener('click', function (event) {
+          const api = cy.expandCollapse('get')
+          api.expandRecursively(cy.nodes(), expandCollapseOptions)
           updateGraph(cy)
         })
 
