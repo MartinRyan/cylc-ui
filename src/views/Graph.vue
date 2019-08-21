@@ -6,7 +6,10 @@
   <div id='holder'>
     <SyncLoader :loading='loading' :color='color' :size='size' class='spinner'></SyncLoader>
     <div class='switchlayout'>
-      <v-btn id='test-button' name='dagre' align-center justify-center :depressed='true' class='dagre-button'>TEST</v-btn>
+      <!-- <v-btn  id='test-button-add-random-filter' name='test-button-add-random-filter' align-center justify-center :depressed='true' class='dagre-button' @click="addRandomFilter">add random filter</v-btn > -->
+       <!-- <v-btn id='test-button-add-random-rand-keyword' name='test-button-add-random-rand-keyword' align-center justify-center :depressed='true' class='dagre-button'  @click="addRandomKeywordToRandomFilter">add keyword</v-btn > -->
+      <v-btn id='test-button' name='test-button' align-center justify-center :depressed='true' class='dagre-button'>TEST</v-btn>
+      <v-btn id='test-button-watch' name='test-button-watch' align-center justify-center :depressed='true' class='dagre-button' @click="update">TEST watch</v-btn>
       <v-btn id='dagre-button' name='dagre' align-center justify-center :depressed='true' class='dagre-button'>DAGRE</v-btn>
       <v-btn id='cosebilkent-button' name='cose-bilkent' align-center justify-center :depressed='true' class='cosebilkent-button'>COSE-BILKENT</v-btn>
       <v-btn id='klay-button' align-center justify-center :depressed='true' class='klay-button'>KLAY</v-btn>
@@ -19,7 +22,9 @@
       <div class='cytoscape-navigatorOverlay'></div>
     </div>
     <b id='collapseAll' class='collapseAll' style='cursor: pointer; color: white'>collapse all</b> /
-    <cytoscape id='cytoscape' :pre-config='preConfig' :after-created='afterCreated' :debug='true'>
+    <b id='change' style='color: white'>network: {{name}}</b>
+    <pre style='color: white'>{{filters}}</pre>
+    <cytoscape id='cytoscape' :pre-config='preConfig' :after-created='afterCreated' :newUpdate='newUpdate' :debug='true'>
     </cytoscape>
   </div>
 </template>
@@ -42,19 +47,17 @@ import Tippy from 'tippy.js'
 
 import VueCytoscape from '@/components/core/Cytoscape.vue'
 import { mixin } from '@/mixins/index'
+import _ from 'lodash'; 
 
 const DATA_URL = 'simple-cytoscape-dot.7.js'
 const DATA_URL2 = 'simple-cytoscape-dot.7.alt.js'
-const graphData = {
-  nodes: ['test'],
-  edges: ['test']
-}
 
 let ur = {}
 let layoutOptions = {}
 let expandCollapseOptions = {}
 let tippy
 const elements = []
+const randomString = () => Math.random().toString(32).slice(2)
 
 const nodeOptions = {
   normal: {
@@ -80,11 +83,67 @@ const config = {}
 
 export default {
   name: 'Graph',
-  data () {
+  data: function () {
     return {
+      filters: {},
+      name: 'Dagre',
       config,
       elements,
-      graphData: graphData,
+      // graphData: {
+      //   nodes: [],
+      //   edges: []
+      // },
+      graphData: {
+        nodes: [{
+            "data": {
+              "id": "338c432b-9f96-420c-908f-84d06539cb1d",
+              "parent": "",
+              "label": "long_start_12.20150219T1200Z",
+              "suid": 442,
+              "shape": "ellipse",
+              "state": "#ff3a2b",
+              "expired": 0,
+              "queued": 0,
+              "retrying": 0,
+              "waiting": 0,
+              "running": 0,
+              "submitted": 0,
+              "succeeded": 0,
+              "failed": 100,
+              "subfailed": 0,
+              "todo": 0,
+              "icon": "/img/outline-cancel-24px.svg"
+              },
+            "position":{
+
+            },
+            "group":"nodes",
+            "removed":false,
+            "selected":false,
+            "selectable":true,
+            "locked":false,
+            "grabbable":true,
+            "classes":""
+            } ],
+          edges: [{ "data": {
+            "id": "1095",
+            "source": "af65e13d-9876-41fc-85ef-02f62af80b24",
+            "target": "f7982efe-6aab-47e0-a343-40587a17e772",
+            "label": "ensemble_thunderbirds_are_go_forecast_002.20150219T1200Z (interaction) ensemble_sync_happy.20150219T1200Z",
+            "suid": 1095
+            },
+            "position":{
+
+            },
+            "group":"edges",
+            "removed":false,
+            "selected":false,
+            "selectable":true,
+            "locked":false,
+            "grabbable":true,
+            "classes":"" 
+            }]
+      },
       i: 1,
       // vue-spinner
       color: '#5e9aff',
@@ -95,6 +154,39 @@ export default {
       size: '1em',
       loading: true,
       status: 'pending'
+    }
+  },
+  watch: {
+    name: {
+      handler (val, oldVal) {
+        console.log('layout changed to ', val)
+        console.log('Updating val: val')
+      },
+      deep: true
+    }
+  },
+  watch: {
+  	filters: {
+    	handler (val, oldVal) {
+      	console.log('something changed')
+      },
+      deep: true
+    }
+  },
+  watch: {
+    graphData: {
+      handler (newValue, oldValue) {
+        // this.updateGraphFromWatcher()
+        this.newUpdate(newValue)
+        console.log('graphData watcher activated')
+        console.log(`Updating from ${oldValue} to ${newValue}`)
+        _.each(newValue, function (value, key) {
+          console.log('newValue key => ', key)
+          console.log('newValue value  => ', value)
+        });
+        // this.$emit('graphData changed ==>', this.graphData)
+      },
+      deep: true
     }
   },
   mixins: [mixin],
@@ -120,19 +212,81 @@ export default {
     console.log(`MOUNTED called, status: ${this.status}`)
     this.handleMounted()
   },
-  watch: {
-    // TODO https://vuejs.org/v2/api/#watch
-    status (newValue, oldValue) {
-      console.log(`Updating from ${oldValue} to ${newValue}`)
-      // Do whatever makes sense now
-      if (newValue === 'success') {
-        this.complex = {
-          deep: 'some deep object'
-        }
-      }
-    }
-  },
+  
   methods: {
+    updateGraphFromWatcher: function() {
+      console.log('updateGraphFromWatcher called')
+      newUpdate()
+    },
+    update: function() {
+      this.$set(this.graphData,
+      {
+        nodes: [{
+            "data": {
+              "id": "338c432b-9f96-420c-908f-84d06539cb1d",
+              "parent": "",
+              "label": "long_start_12.20150219T1200Z",
+              "suid": 442,
+              "shape": "ellipse",
+              "state": "#ff3a2b",
+              "expired": 0,
+              "queued": 0,
+              "retrying": 0,
+              "waiting": 0,
+              "running": 0,
+              "submitted": 0,
+              "succeeded": 0,
+              "failed": 100,
+              "subfailed": 0,
+              "todo": 0,
+              "icon": "/img/outline-cancel-24px.svg"
+              },
+            "position":{
+
+            },
+            "group":"nodes",
+            "removed":false,
+            "selected":false,
+            "selectable":true,
+            "locked":false,
+            "grabbable":true,
+            "classes":""
+            } ],
+          edges: [{ "data": {
+            "id": "1095",
+            "source": "af65e13d-9876-41fc-85ef-02f62af80b24",
+            "target": "f7982efe-6aab-47e0-a343-40587a17e772",
+            "label": "ensemble_thunderbirds_are_go_forecast_002.20150219T1200Z (interaction) ensemble_sync_happy.20150219T1200Z",
+            "suid": 1095
+            },
+            "position":{
+
+            },
+            "group":"edges",
+            "removed":false,
+            "selected":false,
+            "selectable":true,
+            "locked":false,
+            "grabbable":true,
+            "classes":"" 
+            }]
+          })
+    },
+    changeLayout: function() {
+      console.log(' in methods')
+      this.$set(this.name, layout.name)
+    },
+     addRandomFilter () {
+    	const filterName = randomString()
+      this.$set(this.filters, filterName, [])
+    },
+
+    addRandomKeywordToRandomFilter () {
+    	const filterKeys = Object.keys(this.filters)
+    	const randomFilter = filterKeys[Math.floor(Math.random()*filterKeys.length)];
+      this.filters[randomFilter].push(randomString())
+    },
+
     async handleMounted () {
       try {
         this.status = 'success'
@@ -141,6 +295,7 @@ export default {
         this.status = 'error'
       }
     },
+
     preConfig (cytoscape) {
       // cytoscape: this is the cytoscape constructor
       cytoscape.use(cola)
@@ -148,6 +303,11 @@ export default {
       cytoscape.use(coseBilkent)
       cytoscape.use(klay)
     },
+
+    created () {
+      // let $this = this
+    },
+
     async afterCreated (cy) {
       const dagreOptions = {
         name: 'dagre',
@@ -617,8 +777,9 @@ export default {
           }
           const cy = instance
           const data2 = await updateData2()
-          cy.data.elements = data2
+          // cy.data.elements = data2
           const { data: elements } = data2
+          cy.data.elements = elements
           const stylesheet = await updateStyle()
           cy.json({
             elements: elements,
@@ -984,6 +1145,13 @@ export default {
         })
 
       document
+        .getElementById('test-button-watch')
+        // eslint-disable-next-line no-unused-vars
+        .addEventListener('click', function (event) {
+          console.log('click watch button')
+        })
+
+      document
         .getElementById('dagre-button')
         // eslint-disable-next-line no-unused-vars
         .addEventListener('click', function (event) {
@@ -1078,7 +1246,229 @@ export default {
         },
         true
       )
-    }
+    },
+
+  // --------
+  newUpdate(data) {
+      // async function updateDataNew () {
+      //   try {
+      //     console.log('update data 2')
+      //     const data = await axios.get(DATA_URL2)
+      //     return data
+      //   } catch (error) {
+      //     console.log('updateData2 error: ', error)
+      //   }
+      // }
+
+      async function updateStyleNew (data) {
+        try {
+          // const data = await updateDataNew()
+          return updateConfigNew(data)
+        } catch (error) {
+          console.log('updateStyle error: ', error)
+        }
+      }
+
+      async function updateConfigNew (data) {
+        try {
+          const config = {
+            autounselectify: true,
+            boxSelectionEnabled: true,
+            layout: {
+              name: 'dagre',
+              textureOnViewport: false,
+              hideEdgesOnViewport: true
+            },
+            style: [
+              {
+                selector: 'node',
+                css: {
+                  'background-image': function (node) {
+                    let path = node.data('icon')
+                    if (path === undefined || path === '') {
+                      path = require('@/../public/img/baseline-donut_large-24px.svg')
+                    }
+                    return path
+                  },
+                  'background-fit': 'contain contain',
+                  'background-image-opacity': function (node) {
+                    return node.data('running') > 0 ? 1.0 : 0.6
+                  },
+                  'background-color': 'data(state)',
+                  content: 'data(label)',
+                  'font-family': 'Avenir, Helvetica, Arial, sans-serif',
+                  color: '#fff',
+                  'text-max-width': '.5em',
+                  'text-wrap': 'wrap',
+                  'text-valign': 'top',
+                  'text-halign': 'right',
+                  'line-height': 1.1,
+                  'text-margin-x': 5,
+                  'font-size': '.8em',
+                  'min-zoomed-font-size': '.8em',
+                  'border-color': '#fff',
+                  'border-width': '.4em',
+                  shape: 'data(shape)',
+                  width: '6em',
+                  height: '6em',
+                  // 'pie-size': '5.6em', //The diameter of the pie, measured as a percent of node size (e.g. 100%) or an absolute length (e.g. 25px).
+                  'pie-size': function (node) {
+                    let size
+                    node.data('running') > 0 ? size = '5.6em' : size = '0%'
+                    return size
+                  },
+                  'pie-1-background-color': '#9ef9ff', // The colour of the node’s ith pie chart slice.
+                  'pie-1-background-size': 'mapData(submitted, 0, 100, 0, 100)',
+                  'pie-1-background-opacity': 0.7,
+                  'pie-2-background-color': '#4ab7ff',
+                  'pie-2-background-size': 'mapData(running, 0, 100, 0, 100)',
+                  'pie-2-background-opacity': 0.7,
+                  'pie-3-background-color': '#31ff53',
+                  'pie-3-background-size': 'mapData(succeeded, 0, 100, 0, 100)', // The size of the node’s ith pie chart slice, measured in percent (e.g. 25% or 25).
+                  'pie-3-background-opacity': 0.7,
+                  'pie-4-background-color': '#ff3a2b',
+                  'pie-4-background-size': 'mapData(failed, 0, 100, 0, 100)',
+                  'pie-4-background-opacity': 0.7,
+                  'pie-5-background-color': '#d453ff',
+                  'pie-5-background-size': 'mapData(subfailed, 0, 100, 0, 100)',
+                  'pie-5-background-opacity': 0.7,
+                  'pie-6-background-color': '#fefaff',
+                  'pie-6-background-size': 'mapData(expired, 0, 100, 0, 100)',
+                  'pie-6-background-opacity': 0.7,
+                  'pie-7-background-color': '#fff138',
+                  'pie-7-background-size': 'mapData(queued, 0, 100, 0, 100)',
+                  'pie-7-background-opacity': 0.7,
+                  'pie-8-background-color': '#ff3a2b',
+                  'pie-8-background-size': 'mapData(retrying, 0, 100, 0, 100)',
+                  'pie-8-background-opacity': 0.7,
+                  'pie-9-background-color': '#666',
+                  'pie-9-background-size': 'mapData(waiting, 0, 100, 0, 100)',
+                  'pie-9-background-opacity': 0.7,
+                  'pie-10-background-color': '#cacaca',
+                  'pie-10-background-size': 'mapData(todo, 0, 100, 0, 100)',
+                  'pie-10-background-opacity': 0.7
+                }
+              },
+              {
+                selector: 'edge',
+                css: {
+                  width: 5,
+                  'curve-style': 'bezier',
+                  'target-arrow-shape': 'triangle',
+                  'line-color': edgeOptions.normal.lineColor,
+                  'target-arrow-color': '#fff',
+                  opacity: 0.8,
+                  'target-distance-from-node': 10
+                }
+              },
+              {
+                selector: 'edge.selected',
+                style: {
+                  width: 10,
+                  lineColor: edgeOptions.selected.lineColor,
+                  'target-arrow-color': edgeOptions.selected.lineColor
+                }
+              },
+              {
+                selector: 'node.highlight',
+                style: {
+                  'border-color': '#fff',
+                  'border-width': '2px'
+                }
+              },
+              {
+                selector: 'node.semitransp',
+                style: { opacity: '0.5' }
+              },
+              {
+                selector: 'node.selected',
+                style: { 'background-color': nodeOptions.selected.bgColor }
+              },
+              {
+                selector: 'edge.highlight',
+                style: { 'mid-target-arrow-color': 'yellow' }
+              },
+              {
+                selector: 'edge.semitransp',
+                style: { opacity: '0.2' }
+              },
+              {
+                selector: 'node.cy-expand-collapse-collapsed-node',
+                style: {
+                  'background-color': '#333',
+                  shape: 'rectangle'
+                }
+              },
+              {
+                selector: 'edge.cy-expand-collapse-meta-edge',
+                style: {
+                  'background-color': 'green',
+                  shape: 'rectangle'
+                }
+              },
+              {
+                selector: ':parent',
+                style: {
+                  'background-opacity': 0.2,
+                  'background-fit': 'contain contain',
+                  'background-color': '#b7c0e8',
+                  'border-color': '#444',
+                  'border-width': '2px',
+                  'pie-size': '5.6em'
+                }
+              },
+              {
+                selector: ':child',
+                style: {
+                  'border-color': '#444',
+                  'border-width': '2px'
+                }
+              }
+            ],
+            elements: []
+          }
+
+          return config
+        } catch (error) {
+          console.log('config error: ', error)
+        }
+      }
+
+      async function updateGraphNew (data) {
+        try {
+          if (tippy) {
+            tippy.hide()
+          }
+          // const cy = await this.$cytoscape.instance
+          // cy = this.cy
+          // const data2 = await updateDataNew()
+          // cy.data.elements = data2
+          // const { data: elements } = data
+          // cy.data.elements = elements
+          const stylesheet = await updateStyleNew()
+          // const cyto = await cytoscape({
+          //       container: document.getElementById('cytoscape'),
+          //       elements: elements,
+          //       style: stylesheet.style
+          // })
+          const cy =  document.getElementById('cytoscape')
+          cy.json = ({
+            // container: document.getElementById('cytoscape'),
+            elements: elements,
+            style: stylesheet.style
+          })
+          
+          console.log('stylesheet ===|>', stylesheet)
+          console.log('data ===|>', data)
+          console.log('elements ===|>', elements)
+          return cy
+        } catch (error) {
+          console.log('updateGraph error: ', error)
+        }
+      }
+      updateGraphNew(data)
+  }
+  // --------------
   }
 }
 </script>
