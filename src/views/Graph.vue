@@ -6,10 +6,8 @@
   <div id='holder'>
     <SyncLoader :loading='loading' :color='color' :size='size' class='spinner'></SyncLoader>
     <div class='switchlayout'>
-      <!-- <v-btn  id='test-button-add-random-filter' name='test-button-add-random-filter' align-center justify-center :depressed='true' class='dagre-button' @click="addRandomFilter">add random filter</v-btn > -->
-       <!-- <v-btn id='test-button-add-random-rand-keyword' name='test-button-add-random-rand-keyword' align-center justify-center :depressed='true' class='dagre-button'  @click="addRandomKeywordToRandomFilter">add keyword</v-btn > -->
       <v-btn id='test-button' name='test-button' align-center justify-center :depressed='true' class='dagre-button'>TEST</v-btn>
-      <v-btn id='test-button-watch' name='test-button-watch' align-center justify-center :depressed='true' class='dagre-button' @click="update">TEST watch</v-btn>
+      <v-btn id='test-button-watch' name='test-button-watch' align-center justify-center :depressed='true' class='dagre-button' @click='update'>TEST watch</v-btn>
       <v-btn id='dagre-button' name='dagre' align-center justify-center :depressed='true' class='dagre-button'>DAGRE</v-btn>
       <v-btn id='cosebilkent-button' name='cose-bilkent' align-center justify-center :depressed='true' class='cosebilkent-button'>COSE-BILKENT</v-btn>
       <v-btn id='klay-button' align-center justify-center :depressed='true' class='klay-button'>KLAY</v-btn>
@@ -23,8 +21,7 @@
     </div>
     <b id='collapseAll' class='collapseAll' style='cursor: pointer; color: white'>collapse all</b> /
     <b id='change' style='color: white'>network: {{name}}</b>
-    <pre style='color: white'>{{filters}}</pre>
-    <cytoscape id='cytoscape' :pre-config='preConfig' :after-created='afterCreated' :newUpdate='newUpdate' :debug='true'>
+    <cytoscape id='cytoscape' :pre-config='preConfig' :after-created='afterCreated' :debug='true'>
     </cytoscape>
   </div>
 </template>
@@ -47,7 +44,7 @@ import Tippy from 'tippy.js'
 
 import VueCytoscape from '@/components/core/Cytoscape.vue'
 import { mixin } from '@/mixins/index'
-import _ from 'lodash'; 
+import _ from 'lodash'
 
 const DATA_URL = 'simple-cytoscape-dot.7.js'
 const DATA_URL2 = 'simple-cytoscape-dot.7.alt.js'
@@ -85,7 +82,6 @@ export default {
   name: 'Graph',
   data: function () {
     return {
-      filters: {},
       name: 'Dagre',
       config,
       elements,
@@ -95,54 +91,54 @@ export default {
       // },
       graphData: {
         nodes: [{
-            "data": {
-              "id": "338c432b-9f96-420c-908f-84d06539cb1d",
-              "parent": "",
-              "label": "long_start_12.20150219T1200Z",
-              "suid": 442,
-              "shape": "ellipse",
-              "state": "#ff3a2b",
-              "expired": 0,
-              "queued": 0,
-              "retrying": 0,
-              "waiting": 0,
-              "running": 0,
-              "submitted": 0,
-              "succeeded": 0,
-              "failed": 100,
-              "subfailed": 0,
-              "todo": 0,
-              "icon": "/img/outline-cancel-24px.svg"
-              },
-            "position":{
+          data: {
+            id: '338c432b-9f96-420c-908f-84d06539cb1d',
+            parent: '',
+            label: 'long_start_12.20150219T1200Z',
+            suid: 442,
+            shape: 'ellipse',
+            state: '#ff3a2b',
+            expired: 0,
+            queued: 0,
+            retrying: 0,
+            waiting: 0,
+            running: 0,
+            submitted: 0,
+            succeeded: 0,
+            failed: 100,
+            subfailed: 0,
+            todo: 0,
+            icon: '/img/outline-cancel-24px.svg'
+          },
+          position: {
 
-            },
-            "group":"nodes",
-            "removed":false,
-            "selected":false,
-            "selectable":true,
-            "locked":false,
-            "grabbable":true,
-            "classes":""
-            } ],
-          edges: [{ "data": {
-            "id": "1095",
-            "source": "af65e13d-9876-41fc-85ef-02f62af80b24",
-            "target": "f7982efe-6aab-47e0-a343-40587a17e772",
-            "label": "ensemble_thunderbirds_are_go_forecast_002.20150219T1200Z (interaction) ensemble_sync_happy.20150219T1200Z",
-            "suid": 1095
-            },
-            "position":{
+          },
+          group: 'nodes',
+          removed: false,
+          selected: false,
+          selectable: true,
+          locked: false,
+          grabbable: true,
+          classes: ''
+        }],
+        edges: [{ data: {
+          id: '1095',
+          source: 'af65e13d-9876-41fc-85ef-02f62af80b24',
+          target: 'f7982efe-6aab-47e0-a343-40587a17e772',
+          label: 'ensemble_thunderbirds_are_go_forecast_002.20150219T1200Z (interaction) ensemble_sync_happy.20150219T1200Z',
+          suid: 1095
+        },
+        position: {
 
-            },
-            "group":"edges",
-            "removed":false,
-            "selected":false,
-            "selectable":true,
-            "locked":false,
-            "grabbable":true,
-            "classes":"" 
-            }]
+        },
+        group: 'edges',
+        removed: false,
+        selected: false,
+        selectable: true,
+        locked: false,
+        grabbable: true,
+        classes: ''
+        }]
       },
       i: 1,
       // vue-spinner
@@ -157,23 +153,6 @@ export default {
     }
   },
   watch: {
-    name: {
-      handler (val, oldVal) {
-        console.log('layout changed to ', val)
-        console.log('Updating val: val')
-      },
-      deep: true
-    }
-  },
-  watch: {
-  	filters: {
-    	handler (val, oldVal) {
-      	console.log('something changed')
-      },
-      deep: true
-    }
-  },
-  watch: {
     graphData: {
       handler (newValue, oldValue) {
         // this.updateGraphFromWatcher()
@@ -183,7 +162,7 @@ export default {
         _.each(newValue, function (value, key) {
           console.log('newValue key => ', key)
           console.log('newValue value  => ', value)
-        });
+        })
         // this.$emit('graphData changed ==>', this.graphData)
       },
       deep: true
@@ -212,78 +191,77 @@ export default {
     console.log(`MOUNTED called, status: ${this.status}`)
     this.handleMounted()
   },
-  
   methods: {
-    updateGraphFromWatcher: function() {
+    updateGraphFromWatcher: function () {
       console.log('updateGraphFromWatcher called')
-      newUpdate()
+      this.newUpdate()
     },
-    update: function() {
+    update: function () {
       this.$set(this.graphData,
-      {
-        nodes: [{
-            "data": {
-              "id": "338c432b-9f96-420c-908f-84d06539cb1d",
-              "parent": "",
-              "label": "long_start_12.20150219T1200Z",
-              "suid": 442,
-              "shape": "ellipse",
-              "state": "#ff3a2b",
-              "expired": 0,
-              "queued": 0,
-              "retrying": 0,
-              "waiting": 0,
-              "running": 0,
-              "submitted": 0,
-              "succeeded": 0,
-              "failed": 100,
-              "subfailed": 0,
-              "todo": 0,
-              "icon": "/img/outline-cancel-24px.svg"
-              },
-            "position":{
+        {
+          nodes: [{
+            data: {
+              id: '338c432b-9f96-420c-908f-84d06539cb1d',
+              parent: '',
+              label: 'long_start_12.20150219T1200Z',
+              suid: 442,
+              shape: 'ellipse',
+              state: '#ff3a2b',
+              expired: 0,
+              queued: 0,
+              retrying: 0,
+              waiting: 0,
+              running: 0,
+              submitted: 0,
+              succeeded: 0,
+              failed: 100,
+              subfailed: 0,
+              todo: 0,
+              icon: '/img/outline-cancel-24px.svg'
+            },
+            position: {
 
             },
-            "group":"nodes",
-            "removed":false,
-            "selected":false,
-            "selectable":true,
-            "locked":false,
-            "grabbable":true,
-            "classes":""
-            } ],
-          edges: [{ "data": {
-            "id": "1095",
-            "source": "af65e13d-9876-41fc-85ef-02f62af80b24",
-            "target": "f7982efe-6aab-47e0-a343-40587a17e772",
-            "label": "ensemble_thunderbirds_are_go_forecast_002.20150219T1200Z (interaction) ensemble_sync_happy.20150219T1200Z",
-            "suid": 1095
-            },
-            "position":{
+            group: 'nodes',
+            removed: false,
+            selected: false,
+            selectable: true,
+            locked: false,
+            grabbable: true,
+            classes: ''
+          }],
+          edges: [{ data: {
+            id: '1095',
+            source: 'af65e13d-9876-41fc-85ef-02f62af80b24',
+            target: 'f7982efe-6aab-47e0-a343-40587a17e772',
+            label: 'ensemble_thunderbirds_are_go_forecast_002.20150219T1200Z (interaction) ensemble_sync_happy.20150219T1200Z',
+            suid: 1095
+          },
+          position: {
 
-            },
-            "group":"edges",
-            "removed":false,
-            "selected":false,
-            "selectable":true,
-            "locked":false,
-            "grabbable":true,
-            "classes":"" 
-            }]
-          })
+          },
+          group: 'edges',
+          removed: false,
+          selected: false,
+          selectable: true,
+          locked: false,
+          grabbable: true,
+          classes: ''
+          }]
+        })
     },
-    changeLayout: function() {
+    changeLayout: function () {
       console.log(' in methods')
-      this.$set(this.name, layout.name)
+      this.$set(this.name, this.layout.name)
     },
-     addRandomFilter () {
-    	const filterName = randomString()
+    addRandomFilter () {
+      const filterName = randomString()
       this.$set(this.filters, filterName, [])
     },
 
     addRandomKeywordToRandomFilter () {
-    	const filterKeys = Object.keys(this.filters)
-    	const randomFilter = filterKeys[Math.floor(Math.random()*filterKeys.length)];
+      const filterKeys = Object.keys(this.filters)
+      const randomFilter = filterKeys[Math.floor(Math.random() * filterKeys.length)]
       this.filters[randomFilter].push(randomString())
     },
 
@@ -1247,19 +1225,8 @@ export default {
         true
       )
     },
-
-  // --------
-  newUpdate(data) {
-      // async function updateDataNew () {
-      //   try {
-      //     console.log('update data 2')
-      //     const data = await axios.get(DATA_URL2)
-      //     return data
-      //   } catch (error) {
-      //     console.log('updateData2 error: ', error)
-      //   }
-      // }
-
+    // --------
+    newUpdate (data) {
       async function updateStyleNew (data) {
         try {
           // const data = await updateDataNew()
@@ -1451,13 +1418,13 @@ export default {
           //       elements: elements,
           //       style: stylesheet.style
           // })
-          const cy =  document.getElementById('cytoscape')
+          const cy = document.getElementById('cytoscape')
           cy.json = ({
             // container: document.getElementById('cytoscape'),
             elements: elements,
             style: stylesheet.style
           })
-          
+
           console.log('stylesheet ===|>', stylesheet)
           console.log('data ===|>', data)
           console.log('elements ===|>', elements)
@@ -1467,7 +1434,7 @@ export default {
         }
       }
       updateGraphNew(data)
-  }
+    }
   // --------------
   }
 }
