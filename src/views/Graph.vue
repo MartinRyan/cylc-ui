@@ -6,20 +6,21 @@
   <div id='holder'>
     <SyncLoader :loading='loading' :color='color' :size='size' class='spinner'></SyncLoader>
     <div class='switchlayout'>
-      <v-btn id='test-button-watch' name='test-button-watch' align-center justify-center :depressed='true' class='dagre-button' @click='update'>update test</v-btn>
-      <v-btn id='dagre-button' name='dagre' align-center justify-center :depressed='true' class='dagre-button'>DAGRE</v-btn>
-      <v-btn id='cosebilkent-button' name='cose-bilkent' align-center justify-center :depressed='true' class='cosebilkent-button'>COSE-BILKENT</v-btn>
-      <v-btn id='klay-button' align-center justify-center :depressed='true' class='klay-button'>KLAY</v-btn>
-      <v-btn id='hierarchical-button' name='hierarchical' align-center justify-center :depressed='true' class='hierarchical-button'>HIERARCHICAL</v-btn>
-    <v-btn id='cola-button' name='cola' align-center justify-center :depressed='false' class='cola-button'>COLA</v-btn>
+      <v-btn id='test-button-watch2' name='test-button-watch2' align-center justify-center :depressed='true' class='dagre-button' @click="update2(); changeLayout('test2');">update URL2</v-btn>
+      <v-btn id='test-button-watch3' name='test-button-watch3' align-center justify-center :depressed='true' class='dagre-button' @click="update3(); changeLayout('test3');">update URL3</v-btn>
+      <v-btn id='dagre-button' name='dagre' align-center justify-center :depressed='true' class='dagre-button' @click='changeLayout("dagre")'>DAGRE</v-btn>
+      <v-btn id='cosebilkent-button' name='cose-bilkent' align-center justify-center :depressed='true' class='cosebilkent-button' @click='changeLayout("cose-bilkent")'>COSE-BILKENT</v-btn>
+      <v-btn id='klay-button' align-center justify-center :depressed='true' class='klay-button' @click='changeLayout("klay")'>KLAY</v-btn>
+      <v-btn id='hierarchical-button' name='hierarchical' align-center justify-center :depressed='true' class='hierarchical-button' @click='changeLayout("hierarchical")'>HIERARCHICAL</v-btn>
+    <v-btn id='cola-button' name='cola' align-center justify-center :depressed='false' class='cola-button' @click='changeLayout("cola")'>COLA</v-btn>
     </div>
     <div class='cytoscape-navigator-overlay'>
       <canvas></canvas>
       <div class='cytoscape-navigatorView'></div>
       <div class='cytoscape-navigatorOverlay'></div>
     </div>
-    <b id='collapseAll' class='collapseAll' style='cursor: pointer; color: white'>collapse all</b> /
-    <b id='change' style='color: white'>network: {{name}}</b>
+    <b id='collapseAll' class='collapseAll' style='cursor: pointer; color: white'>collapse all</b> :
+    <b id='change' style='color: white'>layout: {{layoutName}}</b>
     <cytoscape id='cytoscape' :pre-config='preConfig' :after-created='afterCreated' :debug='true'>
     </cytoscape>
   </div>
@@ -47,6 +48,7 @@ import _ from 'lodash'
 
 const DATA_URL = 'simple-cytoscape-dot.7.js'
 const DATA_URL2 = 'simple-cytoscape-dot.7.alt.js'
+const DATA_URL3 = 'simple-cytoscape-dot.7.copy.js'
 
 let ur = {}
 let layoutOptions = {}
@@ -237,23 +239,6 @@ const colaLayoutOptions = {
   infinite: false // overrides all other options for a forces-all-the-time mode
 }
 
-// // hierarchical clustering internal needs cy instance
-// // eslint-disable-next-line no-unused-vars
-// const hca = cy.elements().hca({
-//   mode: 'threshold',
-//   threshold: 25,
-//   distance: 'euclidian', // euclidian, squaredEuclidian, manhattan, max
-//   preference: 'mean', // median, mean, min, max,
-//   damping: 0.8, // [0.5 - 1]
-//   minIterations: 100, // [optional] The minimum number of iteraions the algorithm will run before stopping (default 100).
-//   maxIterations: 1000, // [optional] The maximum number of iteraions the algorithm will run before stopping (default 1000).
-//   attributes: [
-//     function (node) {
-//       return node.data('weight')
-//     }
-//   ]
-// })
-
 // eslint-disable-next-line no-unused-vars
 const popperOptions = {
   content: 'test data',
@@ -362,7 +347,6 @@ export default {
   name: 'Graph',
   data: function () {
     return {
-      name: 'Dagre',
       config,
       elements,
       graphData: {
@@ -378,16 +362,16 @@ export default {
       radius: '2px',
       size: '1em',
       loading: true,
-      status: 'pending'
+      status: 'pending',
+      layoutName: 'Dagre'
     }
   },
   watch: {
     graphData: {
-      handler (newValue, oldValue) {
-        this.updateGraph(newValue)
-        console.log('graphData watcher activated')
-        console.log(`Updating from ${oldValue} to ${newValue}`)
-        _.each(newValue, function (value, key) {
+      handler (newElements, oldElements) {
+        this.updateGraph(newElements)
+        console.log(`graphData updating from ${oldElements} to ${newElements}`)
+        _.each(newElements, function (value, key) {
           console.log('newValue key => ', key)
           console.log('newValue value  => ', value)
         })
@@ -395,6 +379,13 @@ export default {
       },
       deep: true
     }
+  //   layoutName: {
+  //     handler (val, oldVal) {
+  //       console.log('layoutName watcher activated')
+  //       console.log(`Updating  to ${val}`)
+  //     },
+  //     deep: true
+  //   }
   },
   mixins: [mixin],
   metaInfo () {
@@ -418,22 +409,36 @@ export default {
   mounted () {
     console.log(`MOUNTED called, status: ${this.status}`)
     this.handleMounted()
+    this.update()
   },
   methods: {
-    updateGraphFromWatcher () {
-      console.log('updateGraphFromWatcher called')
-      this.newUpdate()
+    async update () {
+      const newdata = await this.updateData()
+      console.log('update newdata ==> ', newdata)
+      this.graphData = newdata
     },
 
-    async update () {
+    // for testing only --->
+
+    async update2 () {
       const newdata = await this.updateData2()
       console.log('update newdata ==> ', newdata)
       this.graphData = newdata
     },
 
-    changeLayout () {
-      console.log(' in methods')
-      this.$set(this.name, this.layout.name)
+    async update3 () {
+      const newdata = await this.updateData3()
+      console.log('update newdata ==> ', newdata)
+      this.graphData = newdata
+    },
+
+    // ---->
+
+    changeLayout (value) {
+      console.log('changeLayout value ==> ', value)
+      // this.$set(this.layoutName, value)
+      this.layoutName = value
+      // return this.layoutName
     },
 
     async handleMounted () {
@@ -499,7 +504,7 @@ export default {
     async updateData () {
       try {
         const result = await axios.get(DATA_URL)
-        return result
+        return result.data
       } catch (error) {
         console.log('updateData error: ', error)
       }
@@ -508,6 +513,15 @@ export default {
     async updateData2 () {
       try {
         const result = await axios.get(DATA_URL2)
+        return result.data
+      } catch (error) {
+        console.log('updateData2 error: ', error)
+      }
+    },
+
+    async updateData3 () {
+      try {
+        const result = await axios.get(DATA_URL3)
         return result.data
       } catch (error) {
         console.log('updateData2 error: ', error)
@@ -716,6 +730,7 @@ export default {
 
     async setupExpandCollapse (cy) {
       try {
+        expandCollapseOptions = expandCollapseOptionsCoseBilkent
         cy.expandCollapse(expandCollapseOptions)
         layoutOptions = dagreOptions
         return cy
@@ -726,10 +741,10 @@ export default {
 
     async initialise (cy) {
       try {
-        const { data: elements } = await this.updateData()
+        const data = await this.updateData2()
         const stylesheet = await this.updateStyle(elements)
         cy.json({
-          elements: elements,
+          elements: data,
           style: stylesheet.style
         })
         cy = await this.getGraph(cy)
@@ -767,12 +782,21 @@ export default {
         }
         console.log('updateGraph data :: ', data)
         const cy = await this.$cytoscape.instance
+        // const { data: elements } = data
         const stylesheet = await this.updateStyle(data)
         cy.json({
           elements: data,
           style: stylesheet.style
         })
         console.log('stylesheet ===|>', stylesheet)
+        console.log('')
+        console.log('expandCollapseOptions ===|>', expandCollapseOptions)
+        console.log('layoutOptions ===|>', layoutOptions)
+        console.log('')
+        cy.expandCollapse(expandCollapseOptions)
+        cy.elements()
+          .layout(layoutOptions)
+          .run()
         return cy
       } catch (error) {
         console.log('updateGraph error: ', error)
@@ -1029,19 +1053,13 @@ export default {
 
     activateButtons (cy) {
       document
-        .getElementById('test-button-watch')
-        // eslint-disable-next-line no-unused-vars
-        .addEventListener('click', function (event) {
-          console.log('click watch button')
-        })
-
-      document
         .getElementById('dagre-button')
         // eslint-disable-next-line no-unused-vars
         .addEventListener('click', function (event) {
           layoutOptions = dagreOptions
           expandCollapseOptions = expandCollapseOptionsUndefined
           cy.expandCollapse(expandCollapseOptionsUndefined)
+          ur.do('collapseAll')
           cy.elements()
             .layout(dagreOptions)
             .run()
@@ -1054,6 +1072,7 @@ export default {
           expandCollapseOptions = expandCollapseOptionsCoseBilkent
           cy.expandCollapse(expandCollapseOptionsCoseBilkent)
           layoutOptions = coseBilkentOptions
+          ur.do('collapseAll')
           cy.elements()
             .layout(coseBilkentOptions)
             .run()
@@ -1066,6 +1085,7 @@ export default {
           expandCollapseOptions = expandCollapseOptionsKlay
           cy.expandCollapse(expandCollapseOptionsKlay)
           layoutOptions = klayLayoutOptions
+          ur.do('collapseAll')
           cy.elements()
             .layout(klayLayoutOptions)
             .run()
@@ -1089,6 +1109,7 @@ export default {
               }
             ]
           })
+          ur.do('collapseAll')
           cy.elements()
             .layout(klayLayoutOptions)
             .run()
@@ -1101,6 +1122,7 @@ export default {
           expandCollapseOptions = expandCollapseOptionsCola
           cy.expandCollapse(expandCollapseOptionsCola)
           layoutOptions = colaLayoutOptions
+          ur.do('collapseAll')
           cy.elements()
             .layout(colaLayoutOptions)
             .run()

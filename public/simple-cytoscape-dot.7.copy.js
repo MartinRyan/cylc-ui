@@ -3,37 +3,6 @@
   "nodes": [
     {
       "data": {
-        "id": "338c432b-9f96-420c-908f-84d06539cb1d",
-        "parent": "",
-        "label": "long_start_12.20150219T1200Z",
-        "suid": 442,
-        "shape": "ellipse",
-        "state": "#31ff53",
-        "expired": 0,
-        "queued": 0,
-        "retrying": 0,
-        "waiting": 0,
-        "running": 0,
-        "submitted": 0,
-        "succeeded": 0,
-        "failed": 100,
-        "subfailed": 0,
-        "todo": 0,
-        "icon": "/img/outline-radio_button_unchecked-24px.svg"
-      },
-      "position":{
-
-      },
-      "group":"nodes",
-      "removed":false,
-      "selected":false,
-      "selectable":true,
-      "locked":false,
-      "grabbable":true,
-      "classes":""
-    },
-    {
-      "data": {
         "id": "946be865-95c9-4cf1-89f5-a06400f739b9",
         "parent": "",
         "label": "long_res_create.20150219T1200Z",
@@ -913,63 +882,6 @@
         "target": "c51658c1-4466-4093-8a24-cef092c7dc7f",
         "label": "brief_observations_background_atmos.20150219T1200Z (interaction) brief_observations_merge_background.20150219T1200Z",
         "suid": 1085
-      },
-      "position":{
-
-      },
-      "group":"edges",
-      "removed":false,
-      "selected":false,
-      "selectable":true,
-      "locked":false,
-      "grabbable":true,
-      "classes":""
-    },
-    {
-      "data": {
-        "id": "1084",
-        "source": "338c432b-9f96-420c-908f-84d06539cb1d",
-        "target": "10cb9b20-f73e-48ad-bbe7-2001b64a63ed",
-        "label": "long_start_12.20150219T1200Z (interaction) long_start.20150219T1200Z",
-        "suid": 1084
-      },
-      "position":{
-
-      },
-      "group":"edges",
-      "removed":false,
-      "selected":false,
-      "selectable":true,
-      "locked":false,
-      "grabbable":true,
-      "classes":""
-    },
-    {
-      "data": {
-        "id": "1083",
-        "source": "946be865-95c9-4cf1-89f5-a06400f739b9",
-        "target": "338c432b-9f96-420c-908f-84d06539cb1d",
-        "label": "long_res_create.20150219T1200Z (interaction) long_start_12.20150219T1200Z",
-        "suid": 1083
-      },
-      "position":{
-
-      },
-      "group":"edges",
-      "removed":false,
-      "selected":false,
-      "selectable":true,
-      "locked":false,
-      "grabbable":true,
-      "classes":""
-    },
-    {
-      "data": {
-        "id": "1082",
-        "source": "a411f6ea-eb02-45e9-94bf-65afc49f19a3",
-        "target": "338c432b-9f96-420c-908f-84d06539cb1d",
-        "label": "long_start_06.20150219T0600Z (interaction) long_start.20150219T0600Z",
-        "suid": 1082
       },
       "position":{
 
