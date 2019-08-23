@@ -8,6 +8,7 @@
     <div class='switchlayout'>
       <v-btn id='test-button-watch2' name='test-button-watch2' align-center justify-center :depressed='true' class='dagre-button' @click="update2(); changeLayout('test2');">update URL2</v-btn>
       <v-btn id='test-button-watch3' name='test-button-watch3' align-center justify-center :depressed='true' class='dagre-button' @click="update3(); changeLayout('test3');">update URL3</v-btn>
+      <v-btn id='test-button-watch3' name='test-button-watch3' align-center justify-center :depressed='true' class='dagre-button' @click="update4(); changeLayout('test4');">update URL4</v-btn>
       <v-btn id='dagre-button' name='dagre' align-center justify-center :depressed='true' class='dagre-button' @click='changeLayout("dagre")'>DAGRE</v-btn>
       <v-btn id='cosebilkent-button' name='cose-bilkent' align-center justify-center :depressed='true' class='cosebilkent-button' @click='changeLayout("cose-bilkent")'>COSE-BILKENT</v-btn>
       <v-btn id='klay-button' align-center justify-center :depressed='true' class='klay-button' @click='changeLayout("klay")'>KLAY</v-btn>
@@ -44,11 +45,11 @@ import Tippy from 'tippy.js'
 
 import VueCytoscape from '@/components/core/Cytoscape.vue'
 import { mixin } from '@/mixins/index'
-import _ from 'lodash'
 
 const DATA_URL = 'simple-cytoscape-dot.7.js'
 const DATA_URL2 = 'simple-cytoscape-dot.7.alt.js'
 const DATA_URL3 = 'simple-cytoscape-dot.7.copy.js'
+const DATA_URL4 = 'simple-cytoscape-dot.7.alt2.js'
 
 let ur = {}
 let layoutOptions = {}
@@ -79,7 +80,7 @@ const config = {}
 
 const dagreOptions = {
   name: 'dagre',
-  //  // dagre algo options, uses default value on undefined
+  // dagre algo options, uses default value on undefined
   nodeSep: 140, // the separation between adjacent nodes in the same rank
   edgeSep: 30, // the separation between adjacent edges in the same rank
   rankSep: 140, // the separation between adjacent nodes in the same rank
@@ -370,22 +371,11 @@ export default {
     graphData: {
       handler (newElements, oldElements) {
         this.updateGraph(newElements)
-        console.log(`graphData updating from ${oldElements} to ${newElements}`)
-        _.each(newElements, function (value, key) {
-          console.log('newValue key => ', key)
-          console.log('newValue value  => ', value)
-        })
+        console.log('GRAPHDATA CHANGED')
         // this.$emit('graphData changed ==>', this.graphData)
       },
       deep: true
     }
-  //   layoutName: {
-  //     handler (val, oldVal) {
-  //       console.log('layoutName watcher activated')
-  //       console.log(`Updating  to ${val}`)
-  //     },
-  //     deep: true
-  //   }
   },
   mixins: [mixin],
   metaInfo () {
@@ -406,10 +396,14 @@ export default {
     SyncLoader,
     cytoscape: VueCytoscape
   },
-  mounted () {
+  async mounted (cy) {
     console.log(`MOUNTED called, status: ${this.status}`)
     this.handleMounted()
-    this.update()
+    // load graph data and run layout
+    layoutOptions = dagreOptions
+    expandCollapseOptions = expandCollapseOptionsUndefined
+    const loaded = await this.initialise(cy)
+    loaded ? this.loading = false : console.log('there was an error loading the graph view')
   },
   methods: {
     async update () {
@@ -419,7 +413,6 @@ export default {
     },
 
     // for testing only --->
-
     async update2 () {
       const newdata = await this.updateData2()
       console.log('update newdata ==> ', newdata)
@@ -432,13 +425,16 @@ export default {
       this.graphData = newdata
     },
 
+    async update4 () {
+      const newdata = await this.updateData4()
+      console.log('update newdata ==> ', newdata)
+      this.graphData = newdata
+    },
     // ---->
 
     changeLayout (value) {
       console.log('changeLayout value ==> ', value)
-      // this.$set(this.layoutName, value)
       this.layoutName = value
-      // return this.layoutName
     },
 
     async handleMounted () {
@@ -458,15 +454,17 @@ export default {
       cytoscape.use(klay)
     },
 
-    created () {
-      // let $this = this
-    },
-
     async afterCreated (cy) {
-      console.log('afterCreated cy => ', cy)
+      try {
       // load graph data and run layout
-      const loaded = await this.initialise(cy)
-      loaded ? this.loading = false : console.log('there was an error loading the graph view')
+        // this.cy = cy
+        // layoutOptions = dagreOptions
+        // expandCollapseOptions = expandCollapseOptionsUndefined
+        // const loaded = await this.initialise(cy)
+        // loaded ? this.loading = false : console.log('there was an error loading the graph view')
+      } catch (error) {
+        console.log('afterCreated error', error)
+      }
     },
 
     async registerExtensions (instance) {
@@ -522,6 +520,15 @@ export default {
     async updateData3 () {
       try {
         const result = await axios.get(DATA_URL3)
+        return result.data
+      } catch (error) {
+        console.log('updateData2 error: ', error)
+      }
+    },
+
+    async updateData4 () {
+      try {
+        const result = await axios.get(DATA_URL4)
         return result.data
       } catch (error) {
         console.log('updateData2 error: ', error)
@@ -739,11 +746,14 @@ export default {
       }
     },
 
-    async initialise (cy) {
+    async initialise () {
       try {
+        console.log('INITIALISING')
+        let cy = await this.$cytoscape.instance
         const data = await this.updateData2()
-        const stylesheet = await this.updateStyle(elements)
-        cy.json({
+        const stylesheet = await this.updateStyle(data)
+        cy = cytoscape({
+          container: document.getElementById('cytoscape'),
           elements: data,
           style: stylesheet.style
         })
@@ -758,6 +768,7 @@ export default {
 
     async getGraph (instance) {
       try {
+        console.log('GETGRAPH')
         await this.registerExtensions()
         layoutOptions = dagreOptions
         let cy = await this.runlayout(instance)
@@ -766,9 +777,6 @@ export default {
         this.getPanzoom(cy)
         this.getNavigator(cy)
         this.getUndoRedo(cy)
-        const api = cy.expandCollapse('get')
-        // api.collapseRecursively(cy.nodes(), expandCollapseOptions)
-        api.expandRecursively(cy.nodes(), expandCollapseOptions)
         return cy
       } catch (error) {
         console.log('getGraph error', error)
@@ -776,23 +784,21 @@ export default {
     },
 
     async updateGraph (data) {
+      console.log('UPDATEGRAPH')
       try {
         if (tippy) {
           tippy.hide()
         }
         console.log('updateGraph data :: ', data)
-        const cy = await this.$cytoscape.instance
-        // const { data: elements } = data
+        let cy = await this.$cytoscape.instance
         const stylesheet = await this.updateStyle(data)
-        cy.json({
+        cy = cytoscape({
+          container: document.getElementById('cytoscape'),
           elements: data,
           style: stylesheet.style
         })
-        console.log('stylesheet ===|>', stylesheet)
-        console.log('')
-        console.log('expandCollapseOptions ===|>', expandCollapseOptions)
-        console.log('layoutOptions ===|>', layoutOptions)
-        console.log('')
+        this.getInteractivity(cy)
+        this.activateButtons(cy)
         cy.expandCollapse(expandCollapseOptions)
         cy.elements()
           .layout(layoutOptions)
@@ -1056,9 +1062,9 @@ export default {
         .getElementById('dagre-button')
         // eslint-disable-next-line no-unused-vars
         .addEventListener('click', function (event) {
-          layoutOptions = dagreOptions
           expandCollapseOptions = expandCollapseOptionsUndefined
-          cy.expandCollapse(expandCollapseOptionsUndefined)
+          cy.expandCollapse(expandCollapseOptions)
+          layoutOptions = dagreOptions
           ur.do('collapseAll')
           cy.elements()
             .layout(dagreOptions)
@@ -1130,9 +1136,8 @@ export default {
 
       document
         .getElementById('collapseAll')
-        .addEventListener('click', (event) => {
-          const api = cy.expandCollapse('get')
-          api.collapseRecursively(cy.nodes(), expandCollapseOptions)
+        .addEventListener('click', function (event) {
+          ur.do('collapseAll')
           cy.elements().removeClass('semitransp')
           cy.elements().removeClass('highlight')
           cy.elements().removeClass('selected')
