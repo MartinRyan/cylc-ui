@@ -396,14 +396,14 @@ export default {
     SyncLoader,
     cytoscape: VueCytoscape
   },
-  async mounted (cy) {
+  mounted () {
     console.log(`MOUNTED called, status: ${this.status}`)
     this.handleMounted()
     // load graph data and run layout
-    layoutOptions = dagreOptions
-    expandCollapseOptions = expandCollapseOptionsUndefined
-    const loaded = await this.initialise(cy)
-    loaded ? this.loading = false : console.log('there was an error loading the graph view')
+    // layoutOptions = dagreOptions
+    // expandCollapseOptions = expandCollapseOptionsUndefined
+    // const loaded = await this.initialise(cy)
+    // loaded ? this.loading = false : console.log('there was an error loading the graph view')
   },
   methods: {
     async update () {
@@ -457,11 +457,11 @@ export default {
     async afterCreated (cy) {
       try {
       // load graph data and run layout
-        // this.cy = cy
-        // layoutOptions = dagreOptions
-        // expandCollapseOptions = expandCollapseOptionsUndefined
-        // const loaded = await this.initialise(cy)
-        // loaded ? this.loading = false : console.log('there was an error loading the graph view')
+        this.cy = cy
+        layoutOptions = dagreOptions
+        expandCollapseOptions = expandCollapseOptionsUndefined
+        const loaded = await this.initialise(cy)
+        loaded ? this.loading = false : console.log('there was an error loading the graph view')
       } catch (error) {
         console.log('afterCreated error', error)
       }
