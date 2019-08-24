@@ -45,6 +45,7 @@ import Tippy from 'tippy.js'
 
 import VueCytoscape from '@/components/core/Cytoscape.vue'
 import { mixin } from '@/mixins/index'
+import _ from 'lodash'
 
 const DATA_URL = 'simple-cytoscape-dot.7.js'
 const DATA_URL2 = 'simple-cytoscape-dot.7.alt.js'
@@ -368,18 +369,13 @@ export default {
     }
   },
   watch: {
-    graphData: {
-      handler (newElements, oldElements) {
-        console.log('WATCH')
-        this.updateGraph(this.cy)
-        console.log('GRAPHDATA CHANGED')
-        // this.$emit('graphData changed ==>', this.graphData)
-      },
-      deep: true
-    },
+    graphData: _.debounce(function (newVal) {
+      console.log('GRAPH WATCH')
+      this.debouncer.call()
+    }, 100),
     layoutName: {
       handler (value) {
-        console.log('LAYOUTNAME CHANGED')
+        console.log('LAYOUTNAME WATCH')
         this.updateLayout(value)
       }
     }
@@ -407,7 +403,12 @@ export default {
     console.log(`MOUNTED called, status: ${this.status}`)
     this.handleMounted()
   },
+  created (cy) {
+  },
   methods: {
+    debouncer: function () {
+      console.log('Debouncing:')
+    },
     async update () {
       const newdata = await this.updateData()
       console.log('update newdata ==> ', newdata)
@@ -461,6 +462,7 @@ export default {
         container: document.getElementById('cytoscape'),
         elements: this.graphData
       })
+      this.debouncer = _.debounce(this.updateGraph, 100)
     },
 
     async afterCreated (cy) {
@@ -789,20 +791,21 @@ export default {
       }
     },
 
-    async updateGraph (instance) {
+    async updateGraph () {
       console.log('UPDATEGRAPH')
       try {
         if (tippy) {
           tippy.hide()
         }
+        const cy = this.cy
         console.log('updateGraph data :: ', this.graphData)
         const elements = this.graphData
-        instance.elements().remove()
+        cy.elements().remove()
         const stylesheet = await this.updateStyle(this.graphData)
-        instance.style().fromJson(stylesheet.style).update()
-        instance.add(elements)
-        this.getUndoRedo(instance)
-        instance.elements()
+        cy.style().fromJson(stylesheet.style).update()
+        cy.add(elements)
+        this.getUndoRedo(cy)
+        cy.elements()
           .layout(layoutOptions)
           .run()
       } catch (error) {
@@ -1071,44 +1074,22 @@ export default {
           case 'dagre':
             expandCollapseOptions = expandCollapseOptionsUndefined
             layoutOptions = dagreOptions
-            console.log('DAGRE BUTTON layout options: ', layoutOptions)
-            console.log('DAGRE BUTTON expandCollapseOptions: ', expandCollapseOptions)
-            cy.expandCollapse(expandCollapseOptions)
-            cy.elements()
-              .layout(layoutOptions)
-              .run()
+            this.doLayout(layoutOptions, expandCollapseOptions)
             break
           case 'cose-bilkent':
             expandCollapseOptions = expandCollapseOptionsCoseBilkent
             layoutOptions = coseBilkentOptions
-            console.log('COSE BILKENT BUTTON layout options: ', layoutOptions)
-            console.log('COSE BILKENT expandCollapseOptions: ', expandCollapseOptions)
-            cy.expandCollapse(expandCollapseOptions)
-            // ur.do('collapseAll')
-            cy.elements()
-              .layout(layoutOptions)
-              .run()
+            this.doLayout(layoutOptions, expandCollapseOptions)
             break
           case 'klay':
             expandCollapseOptions = expandCollapseOptionsKlay
             layoutOptions = klayLayoutOptions
-            console.log('KLAY BUTTON layout options: ', layoutOptions)
-            console.log('KLAY expandCollapseOptions: ', expandCollapseOptions)
-            cy.expandCollapse(expandCollapseOptions)
-            cy.elements()
-              .layout(layoutOptions)
-              .run()
+            this.doLayout(layoutOptions, expandCollapseOptions)
             break
           case 'cola':
             expandCollapseOptions = expandCollapseOptionsCola
             layoutOptions = colaLayoutOptions
-            console.log('COLA BUTTON layout options: ', layoutOptions)
-            console.log('COLA expandCollapseOptions: ', expandCollapseOptions)
-            cy.expandCollapse(expandCollapseOptions)
-            // ur.do('collapseAll')
-            cy.elements()
-              .layout(layoutOptions)
-              .run()
+            this.doLayout(layoutOptions, expandCollapseOptions)
             break
           case 'hierarchical':
             cy.elements().hca({
@@ -1125,27 +1106,32 @@ export default {
                 }
               ]
             })
-            // ur.do('collapseAll')
             expandCollapseOptions = expandCollapseOptionsUndefined
             layoutOptions = klayLayoutOptions
-            console.log('HIERARCHICAL BUTTON layout options: ', layoutOptions)
-            console.log('HIERARCHICAL expandCollapseOptions: ', expandCollapseOptions)
-            cy.expandCollapse(expandCollapseOptions)
-            cy.elements()
-              .layout(layoutOptions)
-              .run()
+            this.doLayout(layoutOptions, expandCollapseOptions)
             break
           default:
             expandCollapseOptions = expandCollapseOptionsUndefined
             layoutOptions = dagreOptions
-            cy.expandCollapse(expandCollapseOptions)
-            cy.elements()
-              .layout(layoutOptions)
-              .run()
+            this.doLayout(layoutOptions, expandCollapseOptions)
             break
         }
       } catch (error) {
         console.log('updateLayout error', error)
+      }
+    },
+
+    doLayout (layoutOptions, expandCollapseOptions, collapse = false) {
+      try {
+        collapse ? ur.do('collapseAll') : console.log('not collapsing this layout')
+        console.log('layout options: ', layoutOptions)
+        console.log('expandCollapseOptions: ', expandCollapseOptions)
+        // this.cy.expandCollapse(expandCollapseOptions)
+        this.cy.elements()
+          .layout(layoutOptions)
+          .run()
+      } catch (error) {
+        console.log('doLayout error', error)
       }
     },
 
