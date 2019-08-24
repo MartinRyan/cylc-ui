@@ -9,18 +9,18 @@
       <v-btn id='test-button-watch2' name='test-button-watch2' align-center justify-center :depressed='true' class='dagre-button' @click="update2(); changeLayout('test2');">update URL2</v-btn>
       <v-btn id='test-button-watch3' name='test-button-watch3' align-center justify-center :depressed='true' class='dagre-button' @click="update3(); changeLayout('test3');">update URL3</v-btn>
       <v-btn id='test-button-watch3' name='test-button-watch3' align-center justify-center :depressed='true' class='dagre-button' @click="update4(); changeLayout('test4');">update URL4</v-btn>
-      <v-btn id='dagre-button' name='dagre' align-center justify-center :depressed='true' class='dagre-button' @click='changeLayout("dagre")'>DAGRE</v-btn>
-      <v-btn id='cosebilkent-button' name='cose-bilkent' align-center justify-center :depressed='true' class='cosebilkent-button' @click='changeLayout("cose-bilkent")'>COSE-BILKENT</v-btn>
-      <v-btn id='klay-button' align-center justify-center :depressed='true' class='klay-button' @click='changeLayout("klay")'>KLAY</v-btn>
-      <v-btn id='hierarchical-button' name='hierarchical' align-center justify-center :depressed='true' class='hierarchical-button' @click='changeLayout("hierarchical")'>HIERARCHICAL</v-btn>
-    <v-btn id='cola-button' name='cola' align-center justify-center :depressed='false' class='cola-button' @click='changeLayout("cola")'>COLA</v-btn>
+      <v-btn id='dagre-button' name='dagre' align-center justify-center :depressed='true' class='dagre-button' @click='switchLayout("dagre", $event)'>DAGRE</v-btn>
+      <v-btn id='cosebilkent-button' name='cose-bilkent' align-center justify-center :depressed='true' class='cosebilkent-button' @click='switchLayout("cose-bilkent", $event)'>COSE-BILKENT</v-btn>
+      <v-btn id='klay-button' align-center justify-center :depressed='true' class='klay-button' @click='switchLayout("klay", $event)'>KLAY</v-btn>
+      <v-btn id='hierarchical-button' align-center justify-center :depressed='true' class='hierarchical-button' @click='switchLayout("hierarchical", $event)'>HIERARCHICAL</v-btn>
+      <v-btn id='cola-button' name='cola' align-center justify-center :depressed='false' class='cola-button' @click='switchLayout("cola", $event)'>COLA</v-btn>
     </div>
     <div class='cytoscape-navigator-overlay'>
       <canvas></canvas>
       <div class='cytoscape-navigatorView'></div>
       <div class='cytoscape-navigatorOverlay'></div>
     </div>
-    <b id='collapseAll' class='collapseAll' style='cursor: pointer; color: white'>collapse all</b> :
+    <b id='collapseAll' class='collapseAll' style='cursor: pointer; color: white' @click='collapseAll()'>collapse all</b> :
     <b id='change' style='color: white'>layout: {{layoutName}}</b>
     <cytoscape id='cytoscape' :pre-config='preConfig' :after-created='afterCreated' :debug='true'>
     </cytoscape>
@@ -55,7 +55,6 @@ let ur = {}
 let layoutOptions = {}
 let tippy
 const elements = []
-
 const nodeOptions = {
   normal: {
     bgColor: '#444'
@@ -201,7 +200,7 @@ const colaLayoutOptions = {
   name: 'cola',
   animate: true, // whether to show the layout as it's running
   refresh: 1, // number of ticks per frame; higher is faster but more jerky
-  maxSimulationTime: 4000, // max length in ms to run the layout
+  maxSimulationTime: 3000, // max length in ms to run the layout
   ungrabifyWhileSimulating: false, // so you can't drag nodes during layout
   fit: false, // on every layout reposition of nodes, fit the viewport
   padding: 30, // padding around the simulation
@@ -348,6 +347,7 @@ export default {
   name: 'Graph',
   data: function () {
     return {
+      // cy: {},
       config,
       elements,
       graphData: {
@@ -370,11 +370,18 @@ export default {
   watch: {
     graphData: {
       handler (newElements, oldElements) {
-        this.updateGraph(newElements)
+        console.log('WATCH')
+        this.updateGraph(this.cy)
         console.log('GRAPHDATA CHANGED')
         // this.$emit('graphData changed ==>', this.graphData)
       },
       deep: true
+    },
+    layoutName: {
+      handler (value) {
+        console.log('LAYOUTNAME CHANGED')
+        this.updateLayout(value)
+      }
     }
   },
   mixins: [mixin],
@@ -399,11 +406,6 @@ export default {
   mounted () {
     console.log(`MOUNTED called, status: ${this.status}`)
     this.handleMounted()
-    // load graph data and run layout
-    // layoutOptions = dagreOptions
-    // expandCollapseOptions = expandCollapseOptionsUndefined
-    // const loaded = await this.initialise(cy)
-    // loaded ? this.loading = false : console.log('there was an error loading the graph view')
   },
   methods: {
     async update () {
@@ -439,6 +441,8 @@ export default {
 
     async handleMounted () {
       try {
+        console.log('HANDLE MOUNTED')
+        this.graphData = await this.updateData2() // TODO initial graph data from store
         this.status = 'success'
       } catch (error) {
         console.error('handleMounted error: ', error)
@@ -448,16 +452,20 @@ export default {
 
     preConfig (cytoscape) {
       // cytoscape: this is the cytoscape constructor
+      console.log('PRE-CONFIG')
       cytoscape.use(cola)
       cytoscape.use(dagre)
       cytoscape.use(coseBilkent)
       cytoscape.use(klay)
+      this.cy = cytoscape({
+        container: document.getElementById('cytoscape'),
+        elements: this.graphData
+      })
     },
 
     async afterCreated (cy) {
       try {
       // load graph data and run layout
-        this.cy = cy
         layoutOptions = dagreOptions
         expandCollapseOptions = expandCollapseOptionsUndefined
         const loaded = await this.initialise(cy)
@@ -715,12 +723,11 @@ export default {
     // eslint-disable-next-line no-unused-vars
     async runlayout (instance) {
       try {
-        const cy = instance
-        await cy
+        await instance
           .elements()
           .layout(layoutOptions)
           .run()
-        return cy
+        return instance
       } catch (error) {
         console.log('runlayout error: ', error)
       }
@@ -735,31 +742,29 @@ export default {
       }
     },
 
-    async setupExpandCollapse (cy) {
+    async setupExpandCollapse (instance) {
       try {
         expandCollapseOptions = expandCollapseOptionsCoseBilkent
-        cy.expandCollapse(expandCollapseOptions)
+        instance.expandCollapse(expandCollapseOptions)
         layoutOptions = dagreOptions
-        return cy
+        return instance
       } catch (error) {
         console.log('setupExpandCollapse error', error)
       }
     },
 
-    async initialise () {
+    async initialise (instance) {
       try {
         console.log('INITIALISING')
-        let cy = await this.$cytoscape.instance
-        const data = await this.updateData2()
-        const stylesheet = await this.updateStyle(data)
-        cy = cytoscape({
+        const stylesheet = await this.updateStyle(this.graphData)
+        instance = cytoscape({
           container: document.getElementById('cytoscape'),
-          elements: data,
+          elements: this.graphData,
           style: stylesheet.style
         })
-        cy = await this.getGraph(cy)
-        this.getInteractivity(cy)
-        this.activateButtons(cy)
+        this.cy = await this.getGraph(instance)
+        this.getInteractivity(instance)
+        this.activateKeys(instance)
         return true
       } catch (error) {
         console.log('initialise error', error)
@@ -771,45 +776,41 @@ export default {
         console.log('GETGRAPH')
         await this.registerExtensions()
         layoutOptions = dagreOptions
-        let cy = await this.runlayout(instance)
-        cy = await this.setupExpandCollapse(cy)
-        ur = await this.setupUndo(cy)
-        this.getPanzoom(cy)
-        this.getNavigator(cy)
-        this.getUndoRedo(cy)
-        return cy
+        await this.runlayout(instance)
+        await this.setupExpandCollapse(instance)
+        instance.expandCollapse(expandCollapseOptions)
+        ur = await this.setupUndo(instance)
+        this.getPanzoom(instance)
+        this.getNavigator(instance)
+        this.getUndoRedo(instance)
+        return instance
       } catch (error) {
         console.log('getGraph error', error)
       }
     },
 
-    async updateGraph (data) {
+    async updateGraph (instance) {
       console.log('UPDATEGRAPH')
       try {
         if (tippy) {
           tippy.hide()
         }
-        console.log('updateGraph data :: ', data)
-        let cy = await this.$cytoscape.instance
-        const stylesheet = await this.updateStyle(data)
-        cy = cytoscape({
-          container: document.getElementById('cytoscape'),
-          elements: data,
-          style: stylesheet.style
-        })
-        this.getInteractivity(cy)
-        this.activateButtons(cy)
-        cy.expandCollapse(expandCollapseOptions)
-        cy.elements()
+        console.log('updateGraph data :: ', this.graphData)
+        const elements = this.graphData
+        instance.elements().remove()
+        const stylesheet = await this.updateStyle(this.graphData)
+        instance.style().fromJson(stylesheet.style).update()
+        instance.add(elements)
+        this.getUndoRedo(instance)
+        instance.elements()
           .layout(layoutOptions)
           .run()
-        return cy
       } catch (error) {
         console.log('updateGraph error: ', error)
       }
     },
 
-    getPanzoom (cy) {
+    getPanzoom (instance) {
       try {
         const panzoomdefaults = {
           zoomFactor: 0.1, // zoom factor per zoom tick
@@ -831,16 +832,16 @@ export default {
           },
           fitAnimationDuration: 1000 // duration of animation on fit
         }
-        cy.panzoom(panzoomdefaults)
-        return cy.panzoom
+        instance.panzoom(panzoomdefaults)
+        return instance.panzoom
       } catch (error) {
         console.log('getPanzoom error', error)
       }
     },
 
-    getNavigator (cy) {
+    getNavigator (instance) {
       try {
-        cy.navigator({
+        instance.navigator({
           container: '.cytoscape-navigator-overlay',
           viewLiveFramerate: 0, // set false to update graph pan only on drag end set 0 to do it instantly set a number (frames per second) to update not more than N times per second
           thumbnailEventFramerate: 30, // max thumbnail's updates per second triggered by graph updates
@@ -849,13 +850,13 @@ export default {
           removeCustomContainer: true, // destroy the container specified by user on plugin destroy
           rerenderDelay: 100 // ms to throttle rerender updates to the panzoom for performance
         })
-        return cy.navigator
+        return instance.navigator
       } catch (error) {
         console.log('getPanzoom error', error)
       }
     },
 
-    getUndoRedo (cy) {
+    getUndoRedo (instance) {
       try {
         const undoRedoOptions = {
           isDebug: true, // Debug mode for console messages
@@ -867,17 +868,17 @@ export default {
             this.loading = false
           }
         }
-        cy.undoRedo(undoRedoOptions)
-        return cy.undoRedo
+        instance.undoRedo(undoRedoOptions)
+        return instance.undoRedo
       } catch (error) {
         console.log('getUndoRedo error', error)
       }
     },
 
-    getConstants (cy) {
+    getConstants (instance) {
       // hierarchical clustering internal needs cy instance
       // eslint-disable-next-line no-unused-vars
-      const hca = cy.elements().hca({
+      const hca = instance.elements().hca({
         mode: 'threshold',
         threshold: 25,
         distance: 'euclidian', // euclidian, squaredEuclidian, manhattan, max
@@ -893,23 +894,24 @@ export default {
       })
     },
 
-    getInteractivity (cy) {
+    getInteractivity (instance) {
       try {
-        cy.nodes().on('expandcollapse.beforecollapse', (event) => {
+        instance.nodes().on('expandcollapse.beforecollapse', (event) => {
           if (tippy) {
             tippy.hide()
           }
         })
 
-        cy.nodes().on('expandcollapse.beforeexpand', (event) => {
+        instance.nodes().on('expandcollapse.beforeexpand', (event) => {
           if (tippy) {
             tippy.hide()
           }
         })
 
-        cy.on('tap', 'node', function (event) {
+        instance.on('tap', 'node', function (event) {
           const node = event.target
           console.log('tapped ' + node.id(), node.data())
+          console.log('instance on tapped ' + instance.data())
           const ref = node.popperRef()
           // using tippy ^4.0.0
           tippy = new Tippy(ref, {
@@ -998,7 +1000,7 @@ export default {
           tippy.show()
         })
 
-        cy.on('tap', 'edge', function (event) {
+        instance.on('tap', 'edge', function (event) {
           const edge = event.target
           console.log('tapped ' + edge.id(), edge.data())
           edge.addClass('selected')
@@ -1044,10 +1046,10 @@ export default {
         })
 
         // eslint-disable-next-line no-unused-vars
-        cy.on('click', function (event) {
-          cy.elements().removeClass('semitransp')
-          cy.elements().removeClass('highlight')
-          cy.elements().removeClass('selected')
+        instance.on('click', function (event) {
+          instance.elements().removeClass('semitransp')
+          instance.elements().removeClass('highlight')
+          instance.elements().removeClass('selected')
           if (tippy) {
             tippy.hide()
           }
@@ -1057,102 +1059,108 @@ export default {
       }
     },
 
-    activateButtons (cy) {
-      document
-        .getElementById('dagre-button')
-        // eslint-disable-next-line no-unused-vars
-        .addEventListener('click', function (event) {
-          expandCollapseOptions = expandCollapseOptionsUndefined
-          cy.expandCollapse(expandCollapseOptions)
-          layoutOptions = dagreOptions
-          ur.do('collapseAll')
-          cy.elements()
-            .layout(dagreOptions)
-            .run()
-        })
+    switchLayout (message, event) {
+      event.preventDefault()
+      this.layoutName = message
+    },
 
-      document
-        .getElementById('cosebilkent-button')
-        // eslint-disable-next-line no-unused-vars
-        .addEventListener('click', function (event) {
-          expandCollapseOptions = expandCollapseOptionsCoseBilkent
-          cy.expandCollapse(expandCollapseOptionsCoseBilkent)
-          layoutOptions = coseBilkentOptions
-          ur.do('collapseAll')
-          cy.elements()
-            .layout(coseBilkentOptions)
-            .run()
-        })
+    updateLayout (key) {
+      try {
+        const cy = this.cy
+        switch (key) {
+          case 'dagre':
+            expandCollapseOptions = expandCollapseOptionsUndefined
+            layoutOptions = dagreOptions
+            console.log('DAGRE BUTTON layout options: ', layoutOptions)
+            console.log('DAGRE BUTTON expandCollapseOptions: ', expandCollapseOptions)
+            cy.expandCollapse(expandCollapseOptions)
+            cy.elements()
+              .layout(layoutOptions)
+              .run()
+            break
+          case 'cose-bilkent':
+            expandCollapseOptions = expandCollapseOptionsCoseBilkent
+            layoutOptions = coseBilkentOptions
+            console.log('COSE BILKENT BUTTON layout options: ', layoutOptions)
+            console.log('COSE BILKENT expandCollapseOptions: ', expandCollapseOptions)
+            cy.expandCollapse(expandCollapseOptions)
+            // ur.do('collapseAll')
+            cy.elements()
+              .layout(layoutOptions)
+              .run()
+            break
+          case 'klay':
+            expandCollapseOptions = expandCollapseOptionsKlay
+            layoutOptions = klayLayoutOptions
+            console.log('KLAY BUTTON layout options: ', layoutOptions)
+            console.log('KLAY expandCollapseOptions: ', expandCollapseOptions)
+            cy.expandCollapse(expandCollapseOptions)
+            cy.elements()
+              .layout(layoutOptions)
+              .run()
+            break
+          case 'cola':
+            expandCollapseOptions = expandCollapseOptionsCola
+            layoutOptions = colaLayoutOptions
+            console.log('COLA BUTTON layout options: ', layoutOptions)
+            console.log('COLA expandCollapseOptions: ', expandCollapseOptions)
+            cy.expandCollapse(expandCollapseOptions)
+            // ur.do('collapseAll')
+            cy.elements()
+              .layout(layoutOptions)
+              .run()
+            break
+          case 'hierarchical':
+            cy.elements().hca({
+              mode: 'threshold',
+              threshold: 25,
+              distance: 'euclidian', // euclidian, squaredEuclidian, manhattan, max
+              preference: 'mean', // median, mean, min, max,
+              damping: 0.8, // [0.5 - 1]
+              minIterations: 100, // [optional] The minimum number of iteraions the algorithm will run before stopping (default 100).
+              maxIterations: 1000, // [optional] The maximum number of iteraions the algorithm will run before stopping (default 1000).
+              attributes: [
+                function (node) {
+                  return node.data('weight')
+                }
+              ]
+            })
+            // ur.do('collapseAll')
+            expandCollapseOptions = expandCollapseOptionsUndefined
+            layoutOptions = klayLayoutOptions
+            console.log('HIERARCHICAL BUTTON layout options: ', layoutOptions)
+            console.log('HIERARCHICAL expandCollapseOptions: ', expandCollapseOptions)
+            cy.expandCollapse(expandCollapseOptions)
+            cy.elements()
+              .layout(layoutOptions)
+              .run()
+            break
+          default:
+            expandCollapseOptions = expandCollapseOptionsUndefined
+            layoutOptions = dagreOptions
+            cy.expandCollapse(expandCollapseOptions)
+            cy.elements()
+              .layout(layoutOptions)
+              .run()
+            break
+        }
+      } catch (error) {
+        console.log('updateLayout error', error)
+      }
+    },
 
-      document
-        .getElementById('klay-button')
-        // eslint-disable-next-line no-unused-vars
-        .addEventListener('click', function (event) {
-          expandCollapseOptions = expandCollapseOptionsKlay
-          cy.expandCollapse(expandCollapseOptionsKlay)
-          layoutOptions = klayLayoutOptions
-          ur.do('collapseAll')
-          cy.elements()
-            .layout(klayLayoutOptions)
-            .run()
-        })
+    collapseAll () {
+      ur.do('collapseAll')
+    },
 
-      document
-        .getElementById('hierarchical-button')
-        // eslint-disable-next-line no-unused-vars
-        .addEventListener('click', function (event) {
-          cy.elements().hca({
-            mode: 'threshold',
-            threshold: 25,
-            distance: 'euclidian', // euclidian, squaredEuclidian, manhattan, max
-            preference: 'mean', // median, mean, min, max,
-            damping: 0.8, // [0.5 - 1]
-            minIterations: 100, // [optional] The minimum number of iteraions the algorithm will run before stopping (default 100).
-            maxIterations: 1000, // [optional] The maximum number of iteraions the algorithm will run before stopping (default 1000).
-            attributes: [
-              function (node) {
-                return node.data('weight')
-              }
-            ]
-          })
-          ur.do('collapseAll')
-          cy.elements()
-            .layout(klayLayoutOptions)
-            .run()
-        })
-
-      document
-        .getElementById('cola-button')
-      // eslint-disable-next-line no-unused-vars
-        .addEventListener('click', function (event) {
-          expandCollapseOptions = expandCollapseOptionsCola
-          cy.expandCollapse(expandCollapseOptionsCola)
-          layoutOptions = colaLayoutOptions
-          ur.do('collapseAll')
-          cy.elements()
-            .layout(colaLayoutOptions)
-            .run()
-        })
-
-      document
-        .getElementById('collapseAll')
-        .addEventListener('click', function (event) {
-          ur.do('collapseAll')
-          cy.elements().removeClass('semitransp')
-          cy.elements().removeClass('highlight')
-          cy.elements().removeClass('selected')
-          cy.elements()
-            .layout(layoutOptions)
-            .run()
-        })
-
+    activateKeys (instance) {
       document.addEventListener(
         'keydown',
         function (event) {
-          if (event.ctrlKey && event.which === 90) {
-            cy.undoRedo().undo()
-          } else if (event.ctrlKey && event.which === 89) {
-            cy.undoRedo().redo()
+          if ((event.metaKey && event.which === 90) || (event.ctrlKey && event.which === 90)) {
+            instance.undoRedo().undo()
+          } else if ((event.metaKey && event.which === 89) || (event.ctrlKey && event.which === 89)) {
+            instance.undoRedo().redo()
           }
         },
         true
