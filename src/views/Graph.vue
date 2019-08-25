@@ -6,9 +6,9 @@
   <div id='holder'>
     <SyncLoader :loading='loading' :color='color' :size='size' class='spinner'></SyncLoader>
     <div class='switchlayout'>
-      <v-btn id='test-button-watch2' name='test-button-watch2' align-center justify-center :depressed='true' class='dagre-button' @click="update2(); changeLayout('test2');">update URL2</v-btn>
-      <v-btn id='test-button-watch3' name='test-button-watch3' align-center justify-center :depressed='true' class='dagre-button' @click="update3(); changeLayout('test3');">update URL3</v-btn>
-      <v-btn id='test-button-watch3' name='test-button-watch3' align-center justify-center :depressed='true' class='dagre-button' @click="update4(); changeLayout('test4');">update URL4</v-btn>
+      <v-btn id='test-button-watch2' name='test-button-watch2' align-center justify-center :depressed='true' class='dagre-button' @click="update2(); switchLayout('test2', $event);">update URL2</v-btn>
+      <v-btn id='test-button-watch3' name='test-button-watch3' align-center justify-center :depressed='true' class='dagre-button' @click="update3(); switchLayout('test3', $event);">update URL3</v-btn>
+      <v-btn id='test-button-watch3' name='test-button-watch3' align-center justify-center :depressed='true' class='dagre-button' @click="update4(); switchLayout('test4', $event);">update URL4</v-btn>
       <v-btn id='dagre-button' name='dagre' align-center justify-center :depressed='true' class='dagre-button' @click='switchLayout("dagre", $event)'>DAGRE</v-btn>
       <v-btn id='cosebilkent-button' name='cose-bilkent' align-center justify-center :depressed='true' class='cosebilkent-button' @click='switchLayout("cose-bilkent", $event)'>COSE-BILKENT</v-btn>
       <v-btn id='klay-button' align-center justify-center :depressed='true' class='klay-button' @click='switchLayout("klay", $event)'>KLAY</v-btn>
@@ -53,7 +53,6 @@ const DATA_URL3 = 'simple-cytoscape-dot.7.copy.js'
 const DATA_URL4 = 'simple-cytoscape-dot.7.alt2.js'
 
 let ur = {}
-let layoutOptions = {}
 let tippy
 const elements = []
 const nodeOptions = {
@@ -249,22 +248,6 @@ const popperOptions = {
   closeOnClickOutside: true
 }
 
-let expandCollapseOptions = {
-  layoutBy: undefined, // to rearrange after expand/collapse. It's just layout options or whole layout function. Choose your side!
-  // recommended usage: use cose-bilkent layout with randomize: false to preserve mental map upon expand/collapse
-  fisheye: true, // whether to perform fisheye view after expand/collapse you can specify a function too
-  animate: true, // whether to animate on drawing changes you can specify a function too
-  ready: function () {}, // callback when expand/collapse initialized
-  undoable: true, // and if undoRedoExtension exists,
-  cueEnabled: true, // Whether cues are enabled
-  expandCollapseCuePosition: 'top-left', // default cue position is top left you can specify a function per node too
-  expandCollapseCueSize: 20, // size of expand-collapse cue
-  expandCollapseCueLineSize: 16, // size of lines used for drawing plus-minus icons
-  expandCueImage: undefined, // image of expand icon if undefined draw regular expand cue
-  collapseCueImage: undefined, // image of collapse icon if undefined draw regular collapse cue
-  expandCollapseCueSensitivity: 1 // sensitivity of expand-collapse cues,
-}
-
 const expandCollapseOptionsUndefined = {
   layoutBy: undefined, // to rearrange after expand/collapse. It's just layout options or whole layout function. Choose your side!
   // recommended usage: use cose-bilkent layout with randomize: false to preserve mental map upon expand/collapse
@@ -365,7 +348,9 @@ export default {
       size: '1em',
       loading: true,
       status: 'pending',
-      layoutName: 'Dagre'
+      layoutName: 'dagre',
+      layoutData: {},
+      expandCollapseData: {}
     }
   },
   watch: {
@@ -463,13 +448,14 @@ export default {
         elements: this.graphData
       })
       this.debouncer = _.debounce(this.updateGraph, 100)
+      this.layoutData = dagreOptions
+      this.expandCollapseData = expandCollapseOptionsUndefined
     },
 
     async afterCreated (cy) {
       try {
-      // load graph data and run layout
-        layoutOptions = dagreOptions
-        expandCollapseOptions = expandCollapseOptionsUndefined
+        console.log('AFTER CREATED')
+        // load graph data and run layout
         const loaded = await this.initialise(cy)
         loaded ? this.loading = false : console.log('there was an error loading the graph view')
       } catch (error) {
@@ -559,7 +545,7 @@ export default {
           autounselectify: true,
           boxSelectionEnabled: true,
           layout: {
-            name: 'dagre',
+            name: this.layoutData.name,
             textureOnViewport: false,
             hideEdgesOnViewport: true
           },
@@ -727,7 +713,7 @@ export default {
       try {
         await instance
           .elements()
-          .layout(layoutOptions)
+          .layout(this.layoutData)
           .run()
         return instance
       } catch (error) {
@@ -746,9 +732,8 @@ export default {
 
     async setupExpandCollapse (instance) {
       try {
-        expandCollapseOptions = expandCollapseOptionsCoseBilkent
-        instance.expandCollapse(expandCollapseOptions)
-        layoutOptions = dagreOptions
+        this.expandCollapseData = expandCollapseOptionsCoseBilkent
+        instance.expandCollapse(this.expandCollapseData)
         return instance
       } catch (error) {
         console.log('setupExpandCollapse error', error)
@@ -777,10 +762,10 @@ export default {
       try {
         console.log('GETGRAPH')
         await this.registerExtensions()
-        layoutOptions = dagreOptions
         await this.runlayout(instance)
         await this.setupExpandCollapse(instance)
-        instance.expandCollapse(expandCollapseOptions)
+        // instance.expandCollapse(expandCollapseOptions)
+        instance.expandCollapse(this.expandCollapseData)
         ur = await this.setupUndo(instance)
         this.getPanzoom(instance)
         this.getNavigator(instance)
@@ -805,8 +790,10 @@ export default {
         cy.style().fromJson(stylesheet.style).update()
         cy.add(elements)
         this.getUndoRedo(cy)
+        // TODO get positions of dragged nodes and update those in place where possible
+        // TODO make sure layout doesn't switch on update
         cy.elements()
-          .layout(layoutOptions)
+          .layout(this.layoutData)
           .run()
       } catch (error) {
         console.log('updateGraph error: ', error)
@@ -914,7 +901,6 @@ export default {
         instance.on('tap', 'node', function (event) {
           const node = event.target
           console.log('tapped ' + node.id(), node.data())
-          console.log('instance on tapped ' + instance.data())
           const ref = node.popperRef()
           // using tippy ^4.0.0
           tippy = new Tippy(ref, {
@@ -1072,24 +1058,24 @@ export default {
         const cy = this.cy
         switch (key) {
           case 'dagre':
-            expandCollapseOptions = expandCollapseOptionsUndefined
-            layoutOptions = dagreOptions
-            this.doLayout(layoutOptions, expandCollapseOptions)
+            this.expandCollapseData = expandCollapseOptionsUndefined
+            this.layoutData = dagreOptions
+            this.doLayout(this.layoutData, this.expandCollapseData, true)
             break
           case 'cose-bilkent':
-            expandCollapseOptions = expandCollapseOptionsCoseBilkent
-            layoutOptions = coseBilkentOptions
-            this.doLayout(layoutOptions, expandCollapseOptions)
+            this.expandCollapseData = expandCollapseOptionsCoseBilkent
+            this.layoutData = coseBilkentOptions
+            this.doLayout(this.layoutData, this.expandCollapseData, true)
             break
           case 'klay':
-            expandCollapseOptions = expandCollapseOptionsKlay
-            layoutOptions = klayLayoutOptions
-            this.doLayout(layoutOptions, expandCollapseOptions)
+            this.expandCollapseData = expandCollapseOptionsKlay
+            this.layoutData = klayLayoutOptions
+            this.doLayout(this.layoutData, this.expandCollapseData)
             break
           case 'cola':
-            expandCollapseOptions = expandCollapseOptionsCola
-            layoutOptions = colaLayoutOptions
-            this.doLayout(layoutOptions, expandCollapseOptions)
+            this.expandCollapseData = expandCollapseOptionsCola
+            this.layoutData = colaLayoutOptions
+            this.doLayout(this.layoutData, this.expandCollapseData)
             break
           case 'hierarchical':
             cy.elements().hca({
@@ -1106,14 +1092,14 @@ export default {
                 }
               ]
             })
-            expandCollapseOptions = expandCollapseOptionsUndefined
-            layoutOptions = klayLayoutOptions
-            this.doLayout(layoutOptions, expandCollapseOptions)
+            this.expandCollapseData = expandCollapseOptionsUndefined
+            this.layoutData = klayLayoutOptions
+            this.doLayout(this.layoutData, this.expandCollapseData)
             break
           default:
-            expandCollapseOptions = expandCollapseOptionsUndefined
-            layoutOptions = dagreOptions
-            this.doLayout(layoutOptions, expandCollapseOptions)
+            this.expandCollapseData = expandCollapseOptionsUndefined
+            this.layoutData = dagreOptions
+            this.doLayout(this.layoutData, this.expandCollapseData)
             break
         }
       } catch (error) {
@@ -1121,14 +1107,14 @@ export default {
       }
     },
 
-    doLayout (layoutOptions, expandCollapseOptions, collapse = false) {
+    doLayout (layoutData, expandCollapseData, collapse = false) {
       try {
         collapse ? ur.do('collapseAll') : console.log('not collapsing this layout')
-        console.log('layout options: ', layoutOptions)
-        console.log('expandCollapseOptions: ', expandCollapseOptions)
-        // this.cy.expandCollapse(expandCollapseOptions)
+        console.log('layoutData options: ', layoutData)
+        console.log('expandCollapseData: ', expandCollapseData)
+        this.cy.expandCollapse(expandCollapseData)
         this.cy.elements()
-          .layout(layoutOptions)
+          .layout(layoutData)
           .run()
       } catch (error) {
         console.log('doLayout error', error)
@@ -1136,6 +1122,9 @@ export default {
     },
 
     collapseAll () {
+      if (tippy) {
+        tippy.hide()
+      }
       ur.do('collapseAll')
     },
 
