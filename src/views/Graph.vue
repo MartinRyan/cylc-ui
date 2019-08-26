@@ -68,7 +68,7 @@ const nodeOptions = {
   }
 }
 
-var edgeOptions = {
+const edgeOptions = {
   normal: {
     lineColor: '#fff'
   },
@@ -101,14 +101,30 @@ const dagreOptions = {
   animationDuration: 500, // duration of animation in ms if enabled
   animationEasing: undefined, // easing of animation if enabled
   boundingBox: undefined, // constrain layout bounds { x1, y1, x2, y2 } or { x1, y1, w, h }
-  ready: function () {}, // on layoutready
-  stop: function () {} // on layoutstop
+  ready: function () {
+    console.log('dagre layout ready')
+    this.layoutReady = true
+    this.layoutStopped = false
+  },
+  stop: function () {
+    console.log('dagre layout stopped')
+    this.layoutStopped = true
+    this.layoutReady = false
+  }
 }
 
 const coseBilkentOptions = {
   name: 'cose-bilkent',
-  ready: function () {}, // Called on `layoutready`
-  stop: function () {}, // Called on `layoutstop`
+  ready: function () {
+    console.log('cose bilkent layout ready')
+    this.layoutReady = true
+    this.layoutStopped = false
+  },
+  stop: function () {
+    console.log('cose bilkent layout stopped')
+    this.layoutStopped = true
+    this.layoutReady = false
+  },
   nodeDimensionsIncludeLabels: false, // Whether to include labels in node dimensions. Useful for avoiding label overlap
   refresh: 30, // number of ticks per frame higher is faster but more jerky
   fit: false, // Whether to fit the network view after when done
@@ -145,8 +161,17 @@ const klayLayoutOptions = {
   transform: function (node, pos) {
     return pos
   }, // A function that applies a transform to the final node position
-  ready: undefined, // Callback on layoutready
-  stop: undefined, // Callback on layoutstop
+  // layout event callbacks
+  ready: function () {
+    console.log('klay layout ready')
+    this.layoutReady = true
+    this.layoutStopped = false
+  },
+  stop: function () {
+    console.log('klay layout stopped')
+    this.layoutStopped = true
+    this.layoutReady = false
+  },
   klay: {
     // Following descriptions taken from http://layout.rtsys.informatik.uni-kiel.de:9444/Providedlayout.html?algorithm=de.cau.cs.kieler.klay.layered
     addUnnecessaryBendpoints: false, // Adds bend points even if an edge does not change direction.
@@ -201,17 +226,24 @@ const colaLayoutOptions = {
   name: 'cola',
   animate: true, // whether to show the layout as it's running
   refresh: 1, // number of ticks per frame; higher is faster but more jerky
-  maxSimulationTime: 3000, // max length in ms to run the layout
-  ungrabifyWhileSimulating: false, // so you can't drag nodes during layout
+  maxSimulationTime: 2000, // max length in ms to run the layout
+  ungrabifyWhileSimulating: true, // so you can't drag nodes during layout
   fit: false, // on every layout reposition of nodes, fit the viewport
   padding: 30, // padding around the simulation
   boundingBox: undefined, // constrain layout bounds; { x1, y1, x2, y2 } or { x1, y1, w, h }
   nodeDimensionsIncludeLabels: false, // whether labels should be included in determining the space used by a node
 
   // layout event callbacks
-  ready: function () {}, // on layoutready
-  stop: function () {}, // on layoutstop
-
+  ready: function () {
+    console.log('cola layout ready')
+    this.layoutReady = true
+    this.layoutStopped = false
+  },
+  stop: function () {
+    console.log('cola layout stopped')
+    this.layoutReady = false
+    this.layoutStopped = true
+  },
   // positioning options
   randomize: false, // use random node positions at beginning of layout
   avoidOverlap: true, // if true, prevents overlap of node bounding boxes
@@ -348,7 +380,6 @@ export default {
   name: 'Graph',
   data: function () {
     return {
-      // cy: {},
       config,
       elements,
       graphData: {
@@ -364,8 +395,11 @@ export default {
       radius: '2px',
       size: '1em',
       loading: true,
+      // layout variables
       status: 'pending',
-      layoutName: 'dagre'
+      layoutName: 'dagre',
+      layoutStopped: true,
+      layoutReady: false
     }
   },
   watch: {
@@ -381,6 +415,11 @@ export default {
     }
   },
   mixins: [mixin],
+  computed: {
+    disabled: function () {
+      return this.layoutReady
+    }
+  },
   metaInfo () {
     // TODO: once the component is using live data, use the workflow name here
     // const workflowName = this.$route.params.name || '(TODO)'
@@ -1064,6 +1103,8 @@ export default {
     switchLayout (message, event) {
       event.preventDefault()
       this.layoutName = message
+      this.layoutReady = true
+      this.layoutStopped = false
     },
 
     updateLayout (key) {
