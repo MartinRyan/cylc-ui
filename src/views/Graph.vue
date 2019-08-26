@@ -6,9 +6,9 @@
   <div id='holder'>
     <SyncLoader :loading='loading' :color='color' :size='size' class='spinner'></SyncLoader>
     <div class='switchlayout'>
-      <v-btn id='test-button-watch2' name='test-button-watch2' align-center justify-center :depressed='true' class='dagre-button' @click="update2(); changeLayout('test2');">update URL2</v-btn>
-      <v-btn id='test-button-watch3' name='test-button-watch3' align-center justify-center :depressed='true' class='dagre-button' @click="update3(); changeLayout('test3');">update URL3</v-btn>
-      <v-btn id='test-button-watch3' name='test-button-watch3' align-center justify-center :depressed='true' class='dagre-button' @click="update4(); changeLayout('test4');">update URL4</v-btn>
+      <v-btn id='test-button-watch2' name='test-button-watch2' align-center justify-center :depressed='true' class='dagre-button' @click="update2(); switchLayout('test2', $event);">update URL2</v-btn>
+      <v-btn id='test-button-watch3' name='test-button-watch3' align-center justify-center :depressed='true' class='dagre-button' @click="update3(); switchLayout('test3', $event);">update URL3</v-btn>
+      <v-btn id='test-button-watch3' name='test-button-watch3' align-center justify-center :depressed='true' class='dagre-button' @click="update4(); switchLayout('test4', $event);">update URL4</v-btn>
       <v-btn id='dagre-button' name='dagre' align-center justify-center :depressed='true' class='dagre-button' @click='switchLayout("dagre", $event)'>DAGRE</v-btn>
       <v-btn id='cosebilkent-button' name='cose-bilkent' align-center justify-center :depressed='true' class='cosebilkent-button' @click='switchLayout("cose-bilkent", $event)'>COSE-BILKENT</v-btn>
       <v-btn id='klay-button' align-center justify-center :depressed='true' class='klay-button' @click='switchLayout("klay", $event)'>KLAY</v-btn>
@@ -365,7 +365,7 @@ export default {
       size: '1em',
       loading: true,
       status: 'pending',
-      layoutName: 'Dagre'
+      layoutName: 'dagre'
     }
   },
   watch: {
@@ -914,7 +914,6 @@ export default {
         instance.on('tap', 'node', function (event) {
           const node = event.target
           console.log('tapped ' + node.id(), node.data())
-          console.log('instance on tapped ' + instance.data())
           const ref = node.popperRef()
           // using tippy ^4.0.0
           tippy = new Tippy(ref, {
@@ -1079,7 +1078,7 @@ export default {
           case 'cose-bilkent':
             expandCollapseOptions = expandCollapseOptionsCoseBilkent
             layoutOptions = coseBilkentOptions
-            this.doLayout(layoutOptions, expandCollapseOptions)
+            this.doLayout(layoutOptions, expandCollapseOptions, true)
             break
           case 'klay':
             expandCollapseOptions = expandCollapseOptionsKlay
@@ -1136,6 +1135,9 @@ export default {
     },
 
     collapseAll () {
+      if (tippy) {
+        tippy.hide()
+      }
       ur.do('collapseAll')
     },
 
