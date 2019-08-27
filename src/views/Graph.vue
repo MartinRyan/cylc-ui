@@ -526,7 +526,7 @@ export default {
       // this.layoutName = newdata.name
       // this.layoutReady = true
       // this.layoutStopped = false
-      // this.$socket.sendObj(newdata)
+      this.$socket.sendObj(newdata)
     },
 
     async update () {
