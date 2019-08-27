@@ -6,9 +6,13 @@
   <div id='holder'>
     <SyncLoader :loading='loading' :color='color' :size='size' class='spinner'></SyncLoader>
     <div class='switchlayout'>
+      <v-btn id='test-button-socket-start' name='test-button-socket-start' align-center justify-center :depressed='true' class='dagre-button' @click="socketTest()">socket test</v-btn>
+       <!-- <v-btn id='test-button-socket-start' name='test-button-socket-start' align-center justify-center :depressed='true' class='dagre-button' @click="startSocketTest()">start</v-btn> -->
+       <!-- <v-btn id='test-button-socket-stop' name='test-button-socket-stop' align-center justify-center :depressed='true' class='dagre-button' @click="stopSocketTest()">stop</v-btn> -->
+       <!-- <v-btn id='test-button-socket' name='test-button-socket' align-center justify-center :depressed='true' class='dagre-button' @click="socketTest()">socket test</v-btn> -->
       <v-btn id='test-button-watch2' name='test-button-watch2' align-center justify-center :depressed='true' class='dagre-button' @click="update2(); switchLayout('test2', $event);">update URL2</v-btn>
-      <v-btn id='test-button-watch3' name='test-button-watch3' align-center justify-center :depressed='true' class='dagre-button' @click="update3(); switchLayout('test3', $event);">update URL3</v-btn>
-      <v-btn id='test-button-watch3' name='test-button-watch3' align-center justify-center :depressed='true' class='dagre-button' @click="update4(); switchLayout('test4', $event);">update URL4</v-btn>
+      <v-btn id='test-button-watch3' name='test-button-watch3' align-center justify-center :depressed='true' class='dagre-button' @click="update4(); switchLayout('test3', $event);">update URL3</v-btn>
+      <!-- <v-btn id='test-button-watch4' name='test-button-watch4' align-center justify-center :depressed='true' class='dagre-button' @click="update4(); switchLayout('test4', $event);">update URL4</v-btn> -->
       <v-btn id='dagre-button' name='dagre' align-center justify-center :depressed='true' class='dagre-button' @click='switchLayout("dagre", $event)'>DAGRE</v-btn>
       <v-btn id='cosebilkent-button' name='cose-bilkent' align-center justify-center :depressed='true' class='cosebilkent-button' @click='switchLayout("cose-bilkent", $event)'>COSE-BILKENT</v-btn>
       <v-btn id='klay-button' align-center justify-center :depressed='true' class='klay-button' @click='switchLayout("klay", $event)'>KLAY</v-btn>
@@ -46,6 +50,8 @@ import Tippy from 'tippy.js'
 import VueCytoscape from '@/components/core/Cytoscape.vue'
 import { mixin } from '@/mixins/index'
 import _ from 'lodash'
+// eslint-disable-next-line no-unused-vars
+import graphservice from '@/services/graph.service'
 
 const DATA_URL = 'simple-cytoscape-dot.7.js'
 const DATA_URL2 = 'simple-cytoscape-dot.7.alt.js'
@@ -77,6 +83,7 @@ const edgeOptions = {
   }
 }
 const config = {}
+let interval = {}
 
 const dagreOptions = {
   name: 'dagre',
@@ -380,6 +387,7 @@ export default {
   name: 'Graph',
   data: function () {
     return {
+      isConnected: false,
       config,
       elements,
       graphData: {
@@ -405,6 +413,7 @@ export default {
   watch: {
     graphData: _.debounce(function (newVal) {
       console.log('GRAPH WATCH')
+      console.log('GRAPH WATCH: ', newVal)
       this.debouncer.call()
     }, 100),
     layoutName: {
@@ -414,12 +423,15 @@ export default {
       }
     }
   },
+
   mixins: [mixin],
+
   computed: {
     disabled: function () {
       return this.layoutReady
     }
   },
+
   metaInfo () {
     // TODO: once the component is using live data, use the workflow name here
     // const workflowName = this.$route.params.name || '(TODO)'
@@ -428,33 +440,101 @@ export default {
       title: this.getPageTitle('App.graph')
     }
   },
+
   beforeRouteLeave (to, from, next) {
     if (tippy) {
       tippy.hide()
     }
     next()
   },
+
   components: {
     SyncLoader,
     cytoscape: VueCytoscape
   },
+
   mounted () {
     console.log(`MOUNTED called, status: ${this.status}`)
     this.handleMounted()
+    this.$options.sockets.onmessage = (msg) => this.messageReceived(msg)
   },
+
   created (cy) {
   },
+
   methods: {
     debouncer: function () {
       console.log('Debouncing:')
     },
+
+    async messageReceived (msg) {
+      console.log('graph view messageRecieved: ', msg)
+      this.graphData = JSON.parse(msg.data) // update via watcher
+    },
+
+    // for testing only --->
+    startSocketTest () {
+      try {
+        interval = setInterval(this.socketTestRandom(), 6000)
+      } catch (error) {
+        console.error('startSocketTest error: ', error)
+      }
+    },
+
+    randomNumber (min, max) {
+      return Math.random() * (max - min) + min
+    },
+
+    async socketTestRandom () {
+      try {
+        console.log('startSocketTest ()')
+        const number = Math.floor(this.randomNumber(1, 4))
+        let newdata = {}
+        switch (number) {
+          case 1:
+            newdata = await this.updateData()
+            break
+          case 2:
+            newdata = await this.updateData2()
+            break
+          case 3:
+            newdata = await this.updateData3()
+            break
+          case 4:
+            newdata = await this.updateData4()
+            break
+          default:
+            clearInterval(interval)
+            break
+        }
+        console.log('number () => ', number)
+        console.log('newdata () => ', newdata)
+        this.$socket.sendObj(newdata)
+      } catch (error) {
+        console.error('socketTest error: ', error)
+      }
+    },
+
+    stopSocketTest () {
+      console.log('stopSocketTest ()')
+      clearInterval(interval)
+    },
+
+    async socketTest () {
+      const newdata = await this.updateData3() // test data
+      console.log('update newdata ==> ', newdata)
+      // this.layoutName = newdata.name
+      // this.layoutReady = true
+      // this.layoutStopped = false
+      // this.$socket.sendObj(newdata)
+    },
+
     async update () {
-      const newdata = await this.updateData()
+      const newdata = await this.updateData4()
       console.log('update newdata ==> ', newdata)
       this.graphData = newdata
     },
 
-    // for testing only --->
     async update2 () {
       const newdata = await this.updateData2()
       console.log('update newdata ==> ', newdata)
@@ -938,13 +1018,13 @@ export default {
 
     getInteractivity (instance) {
       try {
-        instance.nodes().on('expandcollapse.beforecollapse', (event) => {
+        this.cy.nodes().on('expandcollapse.beforecollapse', (event) => {
           if (tippy) {
             tippy.hide()
           }
         })
 
-        instance.nodes().on('expandcollapse.beforeexpand', (event) => {
+        this.cy.nodes().on('expandcollapse.beforeexpand', (event) => {
           if (tippy) {
             tippy.hide()
           }
