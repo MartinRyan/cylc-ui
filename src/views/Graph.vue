@@ -6,15 +6,19 @@
   <div id='holder'>
     <SyncLoader :loading='loading' :color='color' :size='size' class='spinner'></SyncLoader>
     <div class='switchlayout'>
-      <v-btn id='test-button-socket-start' name='test-button-socket-start' align-center justify-center :depressed='true' class='dagre-button' @click="socketTest(); switchLayout('test', $event);">socket test</v-btn>
-      <v-btn id='test-button-watch2' name='test-button-watch2' align-center justify-center :depressed='true' class='dagre-button' @click="socketTest2(); switchLayout('test2', $event);">socket test 2</v-btn>
-      <v-btn id='test-button-watch3' name='test-button-watch3' align-center justify-center :depressed='true' class='dagre-button' @click="socketTest3(); switchLayout('test3', $event);">socket test 3</v-btn>
-      <v-btn id='test-button-watch4' name='test-button-watch4' align-center justify-center :depressed='true' class='dagre-button' @click="socketTest4(); switchLayout('test4', $event);">socket test 4</v-btn>
+      <div>
+      <v-btn id='test-button-socket-start' name='test-button-socket-start' align-center justify-center :depressed='true' class='dagre-button' @click="socketTest(); switchLayout('test', $event);">socket 1</v-btn>
+      <v-btn id='test-button-watch2' name='test-button-watch2' align-center justify-center :depressed='true' class='dagre-button' @click="socketTest2(); switchLayout('test2', $event);">socket 2</v-btn>
+      <v-btn id='test-button-watch3' name='test-button-watch3' align-center justify-center :depressed='true' class='dagre-button' @click="socketTest3(); switchLayout('test3', $event);">socket 3</v-btn>
+      <v-btn id='test-button-watch4' name='test-button-watch4' align-center justify-center :depressed='true' class='dagre-button' @click="socketTest4(); switchLayout('test4', $event);">socket 4</v-btn>
+      </div>
+      <div>
       <v-btn id='dagre-button' name='dagre' align-center justify-center :depressed='true' class='dagre-button' @click='switchLayout("dagre", $event)'>DAGRE</v-btn>
       <v-btn id='cosebilkent-button' name='cose-bilkent' align-center justify-center :depressed='true' class='cosebilkent-button' @click='switchLayout("cose-bilkent", $event)'>COSE-BILKENT</v-btn>
       <v-btn id='klay-button' align-center justify-center :depressed='true' class='klay-button' @click='switchLayout("klay", $event)'>KLAY</v-btn>
       <v-btn id='hierarchical-button' align-center justify-center :depressed='true' class='hierarchical-button' @click='switchLayout("hierarchical", $event)'>HIERARCHICAL</v-btn>
       <v-btn id='cola-button' name='cola' align-center justify-center :depressed='false' class='cola-button' @click='switchLayout("cola", $event)'>COLA</v-btn>
+      </div>
     </div>
     <div class='cytoscape-navigator-overlay'>
       <canvas></canvas>
