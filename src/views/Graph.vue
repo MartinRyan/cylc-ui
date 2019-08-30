@@ -53,6 +53,7 @@ import { mixin } from '@/mixins/index'
 import _ from 'lodash'
 // eslint-disable-next-line no-unused-vars
 import graphservice from '@/services/graph.service'
+import { workflowService } from 'workflow-service'
 
 const DATA_URL = 'simple-cytoscape-dot.7.js'
 const DATA_URL2 = 'simple-cytoscape-dot.7.alt.js'
@@ -407,37 +408,42 @@ export default {
       status: 'pending',
       layoutName: 'dagre',
       layoutStopped: true,
-      layoutReady: false
+      layoutReady: false,
+      workflows: [],
+      workflowid: '',
+      workflowdata: this.$store.workflows
     }
   },
   watch: {
     graphData: _.debounce(function (newVal) {
-      console.log('GRAPH WATCH')
       console.log('GRAPH WATCH: ', newVal)
       this.debouncer.call()
     }, 100),
+
     layoutName: {
       handler (value) {
-        console.log('LAYOUTNAME WATCH')
         this.updateLayout(value)
       }
+    },
+
+    workflowdata: {
+      workflowdata: function (newval, oldval) {
+        console.log('workflowdata value changed to: ', JSON.stringify(newval))
+        this.workflowdataUpdated(newval)
+      }
+      // deep: true
     }
   },
 
   mixins: [mixin],
 
   computed: {
-    disabled: function () {
-      return this.layoutReady
-    }
   },
 
   metaInfo () {
-    // TODO: once the component is using live data, use the workflow name here
-    // const workflowName = this.$route.params.name || '(TODO)'
-    // and pass to the getPageTitle('App.graph', , { name: workflowName })
+    const workflowName = this.$route.params.name
     return {
-      title: this.getPageTitle('App.graph')
+      title: this.getPageTitle('App.graph', { name: workflowName })
     }
   },
 
@@ -448,10 +454,17 @@ export default {
     next()
   },
 
+  beforeDestroy () {
+    workflowService.unregister(this)
+  },
+
   mounted () {
     console.log(`MOUNTED called, status: ${this.status}`)
-    // this.$options.sockets.onmessage = (msg) => this.messageReceived(msg)
     this.handleMounted()
+    this.$store.watch((workflows) => {
+      this.workflowUpdated(workflows)
+    }
+    )
   },
 
   created (cy) {
@@ -469,16 +482,20 @@ export default {
       console.log('Debouncing:')
     },
 
+    workflowUpdated (workflows) {
+      console.log('workflowUpdated workflows :', workflows)
+      console.log('workflowUpdated workflows.graph :', workflows.graph)
+      for (const workflow in workflows) {
+        console.log('workflow iteration: workflow', workflow)
+      }
+    },
+
     async messageReceived (msg) {
       console.log('graph view messageRecieved: ', msg)
       this.graphData = JSON.parse(msg.data) // update via watcher
     },
 
     // for testing only --->
-    randomNumber (min, max) {
-      return Math.random() * (max - min) + min
-    },
-
     async socketTest () {
       const newdata = await this.updateData() // test data
       console.log('update newdata ==> ', newdata)
@@ -512,7 +529,6 @@ export default {
     async handleMounted () {
       try {
         console.log('HANDLE MOUNTED')
-        // this.graphData = await this.socketTest2()
         this.status = 'success'
       } catch (error) {
         console.error('handleMounted error: ', error)
@@ -534,17 +550,21 @@ export default {
 
     preConfig (cytoscape) {
       // cytoscape: this is the cytoscape constructor
-      console.log('PRE-CONFIG')
-      cytoscape.use(cola)
-      cytoscape.use(dagre)
-      cytoscape.use(coseBilkent)
-      cytoscape.use(klay)
-      this.cy = cytoscape({
-        container: document.getElementById('cytoscape'),
-        elements: this.graphData
-      })
-      this.initialData()
-      this.debouncer = _.debounce(this.updateGraph, 100)
+      try {
+        console.log('PRE-CONFIG')
+        cytoscape.use(cola)
+        cytoscape.use(dagre)
+        cytoscape.use(coseBilkent)
+        cytoscape.use(klay)
+        this.cy = cytoscape({
+          container: document.getElementById('cytoscape'),
+          elements: this.graphData
+        })
+        this.initialData()
+        this.debouncer = _.debounce(this.updateGraph, 100)
+      } catch (error) {
+        console.error('preConfig error: ', error)
+      }
     },
 
     async afterCreated (cy) {
