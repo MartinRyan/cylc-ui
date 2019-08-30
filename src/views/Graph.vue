@@ -84,7 +84,6 @@ const edgeOptions = {
   }
 }
 const config = {}
-let interval = {}
 
 const dagreOptions = {
   name: 'dagre',
@@ -449,18 +448,20 @@ export default {
     next()
   },
 
-  components: {
-    SyncLoader,
-    cytoscape: VueCytoscape
-  },
-
   mounted () {
     console.log(`MOUNTED called, status: ${this.status}`)
+    // this.$options.sockets.onmessage = (msg) => this.messageReceived(msg)
     this.handleMounted()
-    this.$options.sockets.onmessage = (msg) => this.messageReceived(msg)
   },
 
   created (cy) {
+    console.log('CREATED')
+    this.$options.sockets.onmessage = (msg) => this.messageReceived(msg)
+  },
+
+  components: {
+    SyncLoader,
+    cytoscape: VueCytoscape
   },
 
   methods: {
@@ -511,11 +512,23 @@ export default {
     async handleMounted () {
       try {
         console.log('HANDLE MOUNTED')
-        this.graphData = await this.updateData2() // TODO initial graph data from store
+        // this.graphData = await this.socketTest2()
         this.status = 'success'
       } catch (error) {
         console.error('handleMounted error: ', error)
         this.status = 'error'
+      }
+    },
+
+    async initialData () {
+      try {
+        console.log('INITIAL DATA')
+        this.graphData = {
+          nodes: [],
+          edges: []
+        }
+      } catch (error) {
+        console.error('initialData error: ', error)
       }
     },
 
@@ -530,6 +543,7 @@ export default {
         container: document.getElementById('cytoscape'),
         elements: this.graphData
       })
+      this.initialData()
       this.debouncer = _.debounce(this.updateGraph, 100)
     },
 
