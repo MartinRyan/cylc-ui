@@ -6,12 +6,12 @@
   <div id='holder'>
     <SyncLoader :loading='loading' :color='color' :size='size' class='spinner'></SyncLoader>
     <div class='switchlayout'>
-      <div>
+      <!-- <div>
       <v-btn id='test-button-socket-start' name='test-button-socket-start' align-center justify-center :depressed='true' class='dagre-button' @click="socketTest(); switchLayout('test', $event);">socket 1</v-btn>
       <v-btn id='test-button-watch2' name='test-button-watch2' align-center justify-center :depressed='true' class='dagre-button' @click="socketTest2(); switchLayout('test2', $event);">socket 2</v-btn>
       <v-btn id='test-button-watch3' name='test-button-watch3' align-center justify-center :depressed='true' class='dagre-button' @click="socketTest3(); switchLayout('test3', $event);">socket 3</v-btn>
       <v-btn id='test-button-watch4' name='test-button-watch4' align-center justify-center :depressed='true' class='dagre-button' @click="socketTest4(); switchLayout('test4', $event);">socket 4</v-btn>
-      </div>
+      </div> -->
       <div>
       <v-btn id='dagre-button' name='dagre' align-center justify-center :depressed='true' class='dagre-button' @click='switchLayout("dagre", $event)'>DAGRE</v-btn>
       <v-btn id='cosebilkent-button' name='cose-bilkent' align-center justify-center :depressed='true' class='cosebilkent-button' @click='switchLayout("cose-bilkent", $event)'>COSE-BILKENT</v-btn>
@@ -53,7 +53,22 @@ import { mixin } from '@/mixins/index'
 import _ from 'lodash'
 // eslint-disable-next-line no-unused-vars
 import graphservice from '@/services/graph.service'
-import { workflowService } from 'workflow-service'
+// import { workflowService } from 'workflow-service'
+// import { mapState } from 'vuex'
+
+// const QUERIES = {
+//   root: `
+//       {
+//         workflows {
+//           id
+//           name
+//           owner
+//           host
+//           port
+//         }
+//       }
+//     `
+// }
 
 const DATA_URL = 'simple-cytoscape-dot.7.js'
 const DATA_URL2 = 'simple-cytoscape-dot.7.alt.js'
@@ -410,8 +425,9 @@ export default {
       layoutStopped: true,
       layoutReady: false,
       workflows: [],
-      workflowid: '',
-      workflowdata: this.$store.workflows
+      workflowid: ''
+      // workflowdata: this.$store.workflows,
+      // workflows: this.$store.workflows
     }
   },
   watch: {
@@ -426,19 +442,31 @@ export default {
       }
     },
 
-    workflowdata: {
-      workflowdata: function (newval, oldval) {
-        console.log('workflowdata value changed to: ', JSON.stringify(newval))
-        this.workflowdataUpdated(newval)
-      }
-      // deep: true
+    workflows: {
+      handler: function (newval, oldval) {
+        console.log('workflows stringified value changed to: ', JSON.stringify(newval))
+        console.log('workflows value changed to: ', newval)
+        this.workflowUpdated(newval)
+      },
+      deep: true
     }
   },
 
   mixins: [mixin],
 
-  computed: {
-  },
+  // computed: {
+  //   // ...mapState('workflows', ['workflows']),
+  //   handler: function () {
+  //     let gData = {}
+  //     for (const workflow of this.workflows) {
+  //       if (!_.isEmpty(workflow.message) && !_.isEmpty(workflow.message.gData)) {
+  //         gData = workflow.message.gData
+  //       }
+  //     }
+  //     console.log('COMPUTED GDATA ----> ', gData, ' <----')
+  //     return gData
+  //   }
+  // },
 
   metaInfo () {
     const workflowName = this.$route.params.name
@@ -455,14 +483,15 @@ export default {
   },
 
   beforeDestroy () {
-    workflowService.unregister(this)
+    // workflowService.unregister(this)
   },
 
   mounted () {
     console.log(`MOUNTED called, status: ${this.status}`)
     this.handleMounted()
-    this.$store.watch((workflows) => {
-      this.workflowUpdated(workflows)
+    this.$store.watch((store) => {
+      console.log('MOUNTED WATCH -workflows: ', store.workflows)
+      this.workflows = store.workflows
     }
     )
   },
@@ -470,6 +499,13 @@ export default {
   created (cy) {
     console.log('CREATED')
     this.$options.sockets.onmessage = (msg) => this.messageReceived(msg)
+    // workflowService.register(
+    //   this,
+    //   {
+    //     activeCallback: this.setActive
+    //   }
+    // )
+    // this.subscribe('root')
   },
 
   components: {
@@ -478,16 +514,54 @@ export default {
   },
 
   methods: {
+    // subscribe (queryName) {
+    //   const id = workflowService.subscribe(
+    //     this,
+    //     QUERIES[queryName],
+    //     this.setActive
+    //   )
+    //   if (!(queryName in this.subscriptions)) {
+    //     this.subscriptions[queryName] = {
+    //       id,
+    //       active: false
+    //     }
+    //   }
+    // },
+
+    // unsubscribe (queryName) {
+    //   if (queryName in this.subscriptions) {
+    //     workflowService.unsubscribe(
+    //       this.subscriptions[queryName].id
+    //     )
+    //   }
+    // },
+
+    // setActive (isActive) {
+    //   this.isLoading = !isActive
+    // },
+
     debouncer: function () {
       console.log('Debouncing:')
     },
 
     workflowUpdated (workflows) {
-      console.log('workflowUpdated workflows :', workflows)
-      console.log('workflowUpdated workflows.graph :', workflows.graph)
-      for (const workflow in workflows) {
-        console.log('workflow iteration: workflow', workflow)
-      }
+      let gData = {}
+      Object.keys(workflows).forEach((item) => {
+        if (item === 'graph') {
+          console.log('graph property found')
+          // console.log('workflows[item]: ', workflows[item])
+          if (!_.isEmpty(workflows[item].message) && !_.isEmpty(workflows[item].message.gData)) {
+            console.log('workflows.graph.message.gData: ', workflows[item].message.gData)
+            gData = workflows[item].message.gData
+            // validate here with schema
+          } else {
+            console.log('gData is empty')
+          }
+        }
+        return gData
+      })
+      console.log('GDATA ----> ', gData, ' <----')
+      _.isEmpty(gData) ? console.log('gData is empty or undefined') : this.graphData = gData
     },
 
     async messageReceived (msg) {
