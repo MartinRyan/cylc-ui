@@ -6,12 +6,6 @@
   <div id='holder'>
     <SyncLoader :loading='loading' :color='color' :size='size' class='spinner'></SyncLoader>
     <div class='switchlayout'>
-      <!-- <div>
-      <v-btn id='test-button-socket-start' name='test-button-socket-start' align-center justify-center :depressed='true' class='dagre-button' @click="socketTest(); switchLayout('test', $event);">socket 1</v-btn>
-      <v-btn id='test-button-watch2' name='test-button-watch2' align-center justify-center :depressed='true' class='dagre-button' @click="socketTest2(); switchLayout('test2', $event);">socket 2</v-btn>
-      <v-btn id='test-button-watch3' name='test-button-watch3' align-center justify-center :depressed='true' class='dagre-button' @click="socketTest3(); switchLayout('test3', $event);">socket 3</v-btn>
-      <v-btn id='test-button-watch4' name='test-button-watch4' align-center justify-center :depressed='true' class='dagre-button' @click="socketTest4(); switchLayout('test4', $event);">socket 4</v-btn>
-      </div> -->
       <div>
       <v-btn id='dagre-button' name='dagre' align-center justify-center :depressed='true' class='dagre-button' @click='switchLayout("dagre", $event)'>DAGRE</v-btn>
       <v-btn id='cosebilkent-button' name='cose-bilkent' align-center justify-center :depressed='true' class='cosebilkent-button' @click='switchLayout("cose-bilkent", $event)'>COSE-BILKENT</v-btn>
@@ -44,7 +38,6 @@ import expandCollapse from 'cytoscape-expand-collapse'
 import undoRedo from 'cytoscape-undo-redo'
 import popper from 'cytoscape-popper'
 import jquery from 'jquery'
-import axios from 'axios'
 import SyncLoader from 'vue-spinner/src/SyncLoader.vue'
 import Tippy from 'tippy.js'
 
@@ -53,27 +46,25 @@ import { mixin } from '@/mixins/index'
 import _ from 'lodash'
 // eslint-disable-next-line no-unused-vars
 import graphservice from '@/services/graph.service'
-// import { workflowService } from 'workflow-service'
-// import { mapState } from 'vuex'
+import { workflowService } from 'workflow-service'
 
-// const QUERIES = {
-//   root: `
-//       {
-//         workflows {
-//           id
-//           name
-//           owner
-//           host
-//           port
-//         }
-//       }
-//     `
-// }
-
-const DATA_URL = 'simple-cytoscape-dot.7.js'
-const DATA_URL2 = 'simple-cytoscape-dot.7.alt.js'
-const DATA_URL3 = 'simple-cytoscape-dot.7.copy.js'
-const DATA_URL4 = 'simple-cytoscape-dot.7.alt2.js'
+const QUERIES = {
+  root: `
+        {
+          workflows {
+            id
+            nodesEdges {
+              edges {
+                id
+              }
+              nodes {
+                id
+              }
+            }
+          }
+        }
+    `
+}
 
 let ur = {}
 let layoutOptions = {}
@@ -424,10 +415,11 @@ export default {
       layoutName: 'dagre',
       layoutStopped: true,
       layoutReady: false,
+      nodesEdges: [],
       workflows: [],
-      workflowid: ''
-      // workflowdata: this.$store.workflows,
-      // workflows: this.$store.workflows
+      edges: [],
+      edata: {},
+      workflowId: 'mryan|test.suite.rc' // for testing hardcoded
     }
   },
   watch: {
@@ -444,8 +436,8 @@ export default {
 
     workflows: {
       handler: function (newval, oldval) {
-        console.log('workflows stringified value changed to: ', JSON.stringify(newval))
-        console.log('workflows value changed to: ', newval)
+        // console.log('workflows value', JSON.stringify(newval))
+        console.log('watch workflows value: ', newval)
         this.workflowUpdated(newval)
       },
       deep: true
@@ -453,20 +445,6 @@ export default {
   },
 
   mixins: [mixin],
-
-  // computed: {
-  //   // ...mapState('workflows', ['workflows']),
-  //   handler: function () {
-  //     let gData = {}
-  //     for (const workflow of this.workflows) {
-  //       if (!_.isEmpty(workflow.message) && !_.isEmpty(workflow.message.gData)) {
-  //         gData = workflow.message.gData
-  //       }
-  //     }
-  //     console.log('COMPUTED GDATA ----> ', gData, ' <----')
-  //     return gData
-  //   }
-  // },
 
   metaInfo () {
     const workflowName = this.$route.params.name
@@ -483,7 +461,7 @@ export default {
   },
 
   beforeDestroy () {
-    // workflowService.unregister(this)
+    workflowService.unregister(this)
   },
 
   mounted () {
@@ -498,14 +476,15 @@ export default {
 
   created (cy) {
     console.log('CREATED')
+    // this.workflowId = this.$route.params.name // TODO use this when routing
     this.$options.sockets.onmessage = (msg) => this.messageReceived(msg)
-    // workflowService.register(
-    //   this,
-    //   {
-    //     activeCallback: this.setActive
-    //   }
-    // )
-    // this.subscribe('root')
+    workflowService.register(
+      this,
+      {
+        activeCallback: this.setActive
+      }
+    )
+    this.subscribe('root')
   },
 
   components: {
@@ -514,53 +493,62 @@ export default {
   },
 
   methods: {
-    // subscribe (queryName) {
-    //   const id = workflowService.subscribe(
-    //     this,
-    //     QUERIES[queryName],
-    //     this.setActive
-    //   )
-    //   if (!(queryName in this.subscriptions)) {
-    //     this.subscriptions[queryName] = {
-    //       id,
-    //       active: false
-    //     }
-    //   }
-    // },
+    subscribe (queryName) {
+      const id = workflowService.subscribe(
+        this,
+        QUERIES[queryName],
+        // QUERIES[queryName].replace('WORKFLOW_ID', this.workflowId),
+        this.setActive
+      )
+      if (!(queryName in this.subscriptions)) {
+        this.subscriptions[queryName] = {
+          id,
+          active: false
+        }
+      }
+    },
 
-    // unsubscribe (queryName) {
-    //   if (queryName in this.subscriptions) {
-    //     workflowService.unsubscribe(
-    //       this.subscriptions[queryName].id
-    //     )
-    //   }
-    // },
+    unsubscribe (queryName) {
+      if (queryName in this.subscriptions) {
+        workflowService.unsubscribe(
+          this.subscriptions[queryName].id
+        )
+      }
+    },
 
-    // setActive (isActive) {
-    //   this.isLoading = !isActive
-    // },
+    setActive (isActive) {
+      this.isLoading = !isActive
+    },
 
     debouncer: function () {
       console.log('Debouncing:')
     },
 
     workflowUpdated (workflows) {
-      let gData = {}
+      console.log('workflowUpdated: ')
+      const gData = {
+        nodes: [],
+        edges: []
+      }
       Object.keys(workflows).forEach((item) => {
-        if (item === 'graph') {
-          console.log('graph property found')
-          // console.log('workflows[item]: ', workflows[item])
-          if (!_.isEmpty(workflows[item].message) && !_.isEmpty(workflows[item].message.gData)) {
-            console.log('workflows.graph.message.gData: ', workflows[item].message.gData)
-            gData = workflows[item].message.gData
-            // validate here with schema
-          } else {
-            console.log('gData is empty')
+        console.log('workflows[item]: ', workflows[item]) // workflow
+        _.forEach(workflows[item], (workflow) => {
+          if (workflow.id === this.workflowId) {
+            // TODO validate data
+            console.log('workflow id matched: ', workflow.id)
+            console.log('nodesEges property found')
+            const nodes = workflow.nodesEdges.nodes
+            const edges = workflow.nodesEdges.edges
+            console.log('nodes: ', nodes)
+            console.log('edges: ', edges)
+            console.log('gData -> ', gData)
+            gData.nodes = nodes
+            gData.edges = edges
           }
-        }
+        })
+        console.log('')
         return gData
       })
-      console.log('GDATA ----> ', gData, ' <----')
       _.isEmpty(gData) ? console.log('gData is empty or undefined') : this.graphData = gData
     },
 
@@ -568,32 +556,6 @@ export default {
       console.log('graph view messageRecieved: ', msg)
       this.graphData = JSON.parse(msg.data) // update via watcher
     },
-
-    // for testing only --->
-    async socketTest () {
-      const newdata = await this.updateData() // test data
-      console.log('update newdata ==> ', newdata)
-      this.$socket.sendObj(newdata)
-    },
-
-    async socketTest2 () {
-      const newdata = await this.updateData2()
-      console.log('update newdata ==> ', newdata)
-      this.$socket.sendObj(newdata)
-    },
-
-    async socketTest3 () {
-      const newdata = await this.updateData3()
-      console.log('update newdata ==> ', newdata)
-      this.$socket.sendObj(newdata)
-    },
-
-    async socketTest4 () {
-      const newdata = await this.updateData4()
-      console.log('update newdata ==> ', newdata)
-      this.$socket.sendObj(newdata)
-    },
-    // ---->
 
     changeLayout (value) {
       console.log('changeLayout value ==> ', value)
@@ -682,42 +644,6 @@ export default {
         }
       } catch (error) {
         console.log('registerExtensions error', error)
-      }
-    },
-
-    async updateData () {
-      try {
-        const result = await axios.get(DATA_URL)
-        return result.data
-      } catch (error) {
-        console.log('updateData error: ', error)
-      }
-    },
-
-    async updateData2 () {
-      try {
-        const result = await axios.get(DATA_URL2)
-        return result.data
-      } catch (error) {
-        console.log('updateData2 error: ', error)
-      }
-    },
-
-    async updateData3 () {
-      try {
-        const result = await axios.get(DATA_URL3)
-        return result.data
-      } catch (error) {
-        console.log('updateData2 error: ', error)
-      }
-    },
-
-    async updateData4 () {
-      try {
-        const result = await axios.get(DATA_URL4)
-        return result.data
-      } catch (error) {
-        console.log('updateData2 error: ', error)
       }
     },
 
