@@ -40,7 +40,6 @@ import popper from 'cytoscape-popper'
 import jquery from 'jquery'
 import SyncLoader from 'vue-spinner/src/SyncLoader.vue'
 import Tippy from 'tippy.js'
-// import Vue from 'vue'
 
 import VueCytoscape from '@/components/core/Cytoscape.vue'
 import { mixin } from '@/mixins/index'
@@ -49,6 +48,7 @@ import { debounce, each, isEmpty } from 'lodash'
 import graphservice from '@/services/graph.service'
 import { workflowService } from 'workflow-service'
 
+// workflows(ids: ["WORKFLOW_ID"]) } // TODO when routed
 const QUERIES = {
   root: `
         {
@@ -66,24 +66,6 @@ const QUERIES = {
         }
     `
 }
-// TODO use when routing
-// const QUERIES = {
-//   root: `
-//         {
-//           workflows(ids: ["WORKFLOW_ID"]) {
-//             id
-//             nodesEdges {
-//               edges {
-//                 id
-//               }
-//               nodes {
-//                 id
-//               }
-//             }
-//           }
-//         }
-//     `
-// }
 
 let ur = {}
 let layoutOptions = {}
@@ -409,7 +391,6 @@ const expandCollapseOptionsCola = {
   expandCollapseCueSensitivity: 1 // sensitivity of expand-collapse cues
 }
 
-// Vue.component('graph', {
 export default {
   name: 'Graph',
   data: function () {
@@ -1263,9 +1244,6 @@ export default {
     doLayout (layoutOptions, expandCollapseOptions, collapse = false) {
       try {
         collapse ? ur.do('collapseAll') : console.log('not collapsing this layout')
-        console.log('layout options: ', layoutOptions)
-        console.log('expandCollapseOptions: ', expandCollapseOptions)
-        // this.cy.expandCollapse(expandCollapseOptions)
         this.cy.elements()
           .layout(layoutOptions)
           .run()
@@ -1296,5 +1274,4 @@ export default {
     }
   }
 }
-// )
 </script>
