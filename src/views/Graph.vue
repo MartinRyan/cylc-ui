@@ -43,7 +43,7 @@ import Tippy from 'tippy.js'
 
 import VueCytoscape from '@/components/core/Cytoscape.vue'
 import { mixin } from '@/mixins/index'
-import _ from 'lodash'
+import { debounce, each, isEmpty } from 'lodash'
 // eslint-disable-next-line no-unused-vars
 import graphservice from '@/services/graph.service'
 import { workflowService } from 'workflow-service'
@@ -65,6 +65,24 @@ const QUERIES = {
         }
     `
 }
+// TODO use when routing
+// const QUERIES = {
+//   root: `
+//         {
+//           workflows(ids: ["WORKFLOW_ID"]) {
+//             id
+//             nodesEdges {
+//               edges {
+//                 id
+//               }
+//               nodes {
+//                 id
+//               }
+//             }
+//           }
+//         }
+//     `
+// }
 
 let ur = {}
 let layoutOptions = {}
@@ -423,7 +441,7 @@ export default {
     }
   },
   watch: {
-    graphData: _.debounce(function (newVal) {
+    graphData: debounce(function (newVal) {
       console.log('GRAPH WATCH: ', newVal)
       this.debouncer.call()
     }, 100),
@@ -497,7 +515,7 @@ export default {
       const id = workflowService.subscribe(
         this,
         QUERIES[queryName],
-        // QUERIES[queryName].replace('WORKFLOW_ID', this.workflowId),
+        // QUERIES[queryName].replace('WORKFLOW_ID', this.workflowId), // TODO use this when routing
         this.setActive
       )
       if (!(queryName in this.subscriptions)) {
@@ -524,32 +542,47 @@ export default {
       console.log('Debouncing:')
     },
 
-    workflowUpdated (workflows) {
-      console.log('workflowUpdated: ')
-      const gData = {
-        nodes: [],
-        edges: []
-      }
-      Object.keys(workflows).forEach((item) => {
-        console.log('workflows[item]: ', workflows[item]) // workflow
-        _.forEach(workflows[item], (workflow) => {
-          if (workflow.id === this.workflowId) {
-            // TODO validate data
-            console.log('workflow id matched: ', workflow.id)
-            console.log('nodesEges property found')
-            const nodes = workflow.nodesEdges.nodes
-            const edges = workflow.nodesEdges.edges
-            console.log('nodes: ', nodes)
-            console.log('edges: ', edges)
-            console.log('gData -> ', gData)
-            gData.nodes = nodes
-            gData.edges = edges
-          }
+    async workflowUpdated (workflows) {
+      try {
+        console.log('workflowUpdated: ')
+        const gData = {
+          nodes: [],
+          edges: []
+        }
+
+        each(workflows, (value, key) => {
+          each(value, (workflow, key) => {
+            console.log('workflow.id: ', workflow.id)
+            if (workflow.id === this.workflowId) {
+              console.log('workflow id matched: ', workflow.id)
+              const nodes = workflow.nodesEdges.nodes
+              const edges = workflow.nodesEdges.edges
+              gData.nodes = nodes
+              gData.edges = edges
+            }
+          })
+          console.log('')
+          return gData
         })
-        console.log('')
-        return gData
-      })
-      _.isEmpty(gData) ? console.log('gData is empty or undefined') : this.graphData = gData
+        isEmpty(gData) ? console.log('gData is empty or undefined') : this.validate(gData)
+      } catch (error) {
+        console.error('workflowUpdated error: ', error)
+      }
+    },
+
+    async validate (gdata) {
+      try {
+        const elements = {
+          nodes: [],
+          edges: []
+        }
+        elements.nodes = gdata.nodes.map(node => ({ id: node.id, label: node.label, state: node.state, runpercent: node.runpercent }))
+        elements.edges = gdata.edges.map(edge => ({ id: edge.id, source: edge.source, target: edge.target, label: edge.label }))
+        console.log('elements: ', elements)
+        this.graphData = elements
+      } catch (error) {
+        console.error('validate error: ', error)
+      }
     },
 
     async messageReceived (msg) {
@@ -597,7 +630,7 @@ export default {
           elements: this.graphData
         })
         this.initialData()
-        this.debouncer = _.debounce(this.updateGraph, 100)
+        this.debouncer = debounce(this.updateGraph, 100)
       } catch (error) {
         console.error('preConfig error: ', error)
       }
