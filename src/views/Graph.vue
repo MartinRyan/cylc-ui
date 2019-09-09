@@ -40,6 +40,7 @@ import popper from 'cytoscape-popper'
 import jquery from 'jquery'
 import SyncLoader from 'vue-spinner/src/SyncLoader.vue'
 import Tippy from 'tippy.js'
+// import Vue from 'vue'
 
 import VueCytoscape from '@/components/core/Cytoscape.vue'
 import { mixin } from '@/mixins/index'
@@ -408,6 +409,7 @@ const expandCollapseOptionsCola = {
   expandCollapseCueSensitivity: 1 // sensitivity of expand-collapse cues
 }
 
+// Vue.component('graph', {
 export default {
   name: 'Graph',
   data: function () {
@@ -437,6 +439,7 @@ export default {
       workflows: [],
       edges: [],
       edata: {},
+      subscriptions: {},
       workflowId: 'mryan|test.suite.rc' // for testing hardcoded
     }
   },
@@ -1293,4 +1296,5 @@ export default {
     }
   }
 }
+// )
 </script>
