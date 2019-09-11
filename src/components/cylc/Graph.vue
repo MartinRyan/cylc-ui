@@ -1,7 +1,3 @@
-<style>
-@import '~@/styles/cytoscape/panzoom.css';
-@import '~@/styles/cytoscape/cytoscape-custom.css';
-</style>
 <template>
   <div id='holder'>
     <SyncLoader :loading='loading' :color='color' :size='size' class='spinner'></SyncLoader>
@@ -56,15 +52,47 @@ const QUERIES = {
             nodesEdges {
               edges {
                 id
+                source
+                target
               }
               nodes {
                 id
+                state
               }
             }
           }
         }
     `
 }
+
+// activate when uiserver sends required properties
+// const QUERIES = {
+//   root: `
+//         {
+//           workflows(ids: ["WORKFLOW_ID"]) {
+//             id
+//             nodesEdges {
+//               edges {
+//                 id
+//                 source
+//                 target
+//                 label
+//                 suicide
+//                 cond
+
+//               }
+//               nodes {
+//                 id
+//                 state
+//                 label
+//                 runpercent
+//                 parent
+//               }
+//             }
+//           }
+//         }
+//     `
+// }
 
 let ur = {}
 let layoutOptions = {}
@@ -535,6 +563,7 @@ export default {
         each(workflows, (value, key) => {
           each(value, (workflow, key) => {
             console.log('workflow.id: ', workflow.id)
+            console.log('workflow: ', JSON.stringify(workflow))
             if (!isEmpty(workflow.nodesEdges)) {
               const nodes = workflow.nodesEdges.nodes
               const edges = workflow.nodesEdges.edges
@@ -557,8 +586,10 @@ export default {
           nodes: [],
           edges: []
         }
-        elements.nodes = gdata.nodes.map(node => ({ id: node.id, label: node.label, state: node.state, runpercent: node.runpercent }))
-        elements.edges = gdata.edges.map(edge => ({ id: edge.id, source: edge.source, target: edge.target, label: edge.label }))
+        // elements.nodes = gdata.nodes.map(node => ({ id: node.id, label: node.label, state: node.state, runpercent: node.runpercent, parent: node.parent }))
+        // elements.edges = gdata.edges.map(edge => ({ id: edge.id, source: edge.source, target: edge.target, label: edge.label }))
+        elements.nodes = gdata.nodes.map(node => ({ id: node.id, state: node.state }))
+        elements.edges = gdata.edges.map(edge => ({ id: edge.id, source: edge.source, target: edge.target }))
         console.log('elements: ', elements)
         this.graphData = elements
       } catch (error) {
@@ -684,10 +715,8 @@ export default {
               selector: 'node',
               css: {
                 'background-image': function (node) {
-                  let path = node.data('icon')
-                  if (path === undefined || path === '') {
-                    path = require('@/../public/img/baseline-donut_large-24px.svg')
-                  }
+                  let path = this.iconFromState(node.data('state'))
+                  path = require('@/../public/img/' + path)
                   return path
                 },
                 'background-fit': 'contain contain',
@@ -745,7 +774,7 @@ export default {
                 'pie-9-background-size': 'mapData(waiting, 0, 100, 0, 100)',
                 'pie-9-background-opacity': 0.7,
                 'pie-10-background-color': '#cacaca',
-                'pie-10-background-size': 'mapData(todo, 0, 100, 0, 100)',
+                'pie-10-background-size': 'mapData(runpercent, 0, 100, 0, 100)',
                 'pie-10-background-opacity': 0.7
               }
             },
@@ -835,6 +864,47 @@ export default {
         return config
       } catch (error) {
         console.log('config error: ', error)
+      }
+    },
+
+    iconFromState (state) {
+      try {
+        let icon = ''
+        switch (state) {
+          case 'expired':
+            icon = 'baseline-donut_large-24px.svg'
+            break
+          case 'failed':
+            icon = 'outline-cancel-24px.svg'
+            break
+          case 'queued':
+            icon = 'baseline-donut_large-24px.svg'
+            break
+          case 'retrying':
+            icon = 'outline-refresh-24px.svg'
+            break
+          case 'running':
+            icon = 'outline-adjust-24px.svg'
+            break
+          case 'subfailed':
+            icon = 'outline-filter_tilt_shift-24px.svg'
+            break
+          case 'submitted':
+            icon = 'outline-adjust-24px.svg'
+            break
+          case 'succeeded':
+            icon = 'outline-radio_button_unchecked-24px.svg'
+            break
+          case 'waiting':
+            icon = 'outline-radio_button_unchecked-24px.svg'
+            break
+          default:
+            icon = 'baseline-donut_large-24px.svg'
+            break
+        }
+        return icon
+      } catch (error) {
+        console.log('iconFromState error: ', error)
       }
     },
 
@@ -1035,49 +1105,22 @@ export default {
           tippy = new Tippy(ref, {
             content: () => {
               const content = document.createElement('div')
-              const expired = node.data('expired')
-              const failed = node.data('failed')
-              const parent = node.data('parent')
-              const running = node.data('running')
-              // eslint-disable-next-line no-unused-vars
-              const todo = node.data('todo')
-              const queued = node.data('queued')
-              const retrying = node.data('retrying')
-              const subfailed = node.data('subfailed')
-              const submitted = node.data('submitted')
-              const succeeded = node.data('succeeded')
-              const waiting = node.data('waiting')
               const children = node.data('collapsedChildren')
-              // if state is in the data then this will become unecessary
-              let state
-              const currentstate = {}
-              currentstate.expired = expired
-              currentstate.failed = failed
-              currentstate.running = running
-              currentstate.queued = queued
-              currentstate.retrying = retrying
-              currentstate.subfailed = subfailed
-              currentstate.submitted = submitted
-              currentstate.succeeded = succeeded
-              currentstate.waiting = waiting
-              for (const item in currentstate) {
-                // console.log('key:' + item + ' value:' + currentstate[item])
-                if (currentstate[item] > 0) {
-                  state = item
-                }
+              let runpercent = ''
+              if (node.data('runpercent') !== undefined) {
+                runpercent = parseInt(node.data('runpercent'))
               }
-              // console.log('isParent => ', children)
+              let state = node.data('state')
               if (children !== undefined) {
                 state = 'compound node'
               }
-
               const parentstring =
                 '<br><strong>parent <span style="color: aqua;">' +
                 parent +
                 '%</span></strong>'
               const progress =
                 '<br><strong>progress <span style="color: aqua;">' +
-                running +
+                runpercent +
                 '%</span></strong>'
               content.innerHTML =
                 'node<br>' +
@@ -1093,7 +1136,7 @@ export default {
                 '<strong>state <span style="color: aqua;">' +
                 state +
                 '</span></strong>'
-              if (running > 0) {
+              if (state === 'running') {
                 content.innerHTML += progress
               }
               if (parent !== undefined) {
@@ -1272,3 +1315,7 @@ export default {
   }
 }
 </script>
+<style>
+@import '~@/styles/cytoscape/panzoom.css';
+@import '~@/styles/cytoscape/cytoscape-custom.css';
+</style>
