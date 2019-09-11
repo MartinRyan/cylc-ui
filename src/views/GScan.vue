@@ -163,7 +163,7 @@ export default {
     },
 
     viewGraph (workflow) {
-      let routeData = this.$router.push({ path: `/graph/${workflow.id}` })
+      lthis.$router.push({ path: `/graph/${workflow.id}` })
     },
 
     subscribe (queryName) {
