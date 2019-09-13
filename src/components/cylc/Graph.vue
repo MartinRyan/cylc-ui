@@ -36,13 +36,93 @@ import popper from 'cytoscape-popper'
 import jquery from 'jquery'
 import SyncLoader from 'vue-spinner/src/SyncLoader.vue'
 import Tippy from 'tippy.js'
-
+import getUuid from 'uuid-by-string'
 import VueCytoscape from '@/components/core/Cytoscape.vue'
 import { mixin } from '@/mixins/index'
-import { debounce, each, isEmpty } from 'lodash'
+import { debounce, each, has, isEmpty } from 'lodash'
 // eslint-disable-next-line no-unused-vars
 import graphservice from '@/services/graph.service'
 import { workflowService } from 'workflow-service'
+
+// const GRAPHDATA = {
+//   workflow: {
+//     nodesEdges: {
+//       nodes: [
+//         {
+//           id: 'mryan|graph1.suite.rc|2021|prep',
+//           label: 'mryan|graph1.suite.rc|2021|prep',
+//           parent: {
+//             id: 'mryan|graph1.suite.rc|2021|root',
+//             state: 'waiting'
+//           },
+//           state: 'waiting'
+//         },
+//         {
+//           id: 'mryan|graph1.suite.rc|2021|model',
+//           label: 'mryan|graph1.suite.rc|2021|model',
+//           parent: {
+//             id: 'mryan|graph1.suite.rc|2021|root',
+//             state: 'waiting'
+//           },
+//           state: 'waiting'
+//         },
+//         {
+//           id: 'mryan|graph1.suite.rc|2021|post',
+//           label: 'mryan|graph1.suite.rc|2021|post',
+//           parent: {
+//             id: 'mryan|graph1.suite.rc|2021|root',
+//             state: 'waiting'
+//           },
+//           state: 'waiting'
+//         },
+//         {
+//           id: 'mryan|graph1.suite.rc|2023|stop',
+//           label: 'mryan|graph1.suite.rc|2023|stop',
+//           parent: {
+//             id: 'mryan|graph1.suite.rc|2023|root',
+//             state: 'waiting'
+//           },
+//           state: 'waiting'
+//         },
+//         {
+//           id: 'mryan|graph1.suite.rc|2023|post',
+//           label: 'mryan|graph1.suite.rc|2023|post',
+//           parent: {
+//             id: 'mryan|graph1.suite.rc|2023|root',
+//             state: 'waiting'
+//           },
+//           state: 'expired'
+//         }
+//       ],
+//       edges: [
+//         {
+//           id: 'mryan|graph1.suite.rc|post.2023|stop.2023',
+//           source: 'mryan|graph1.suite.rc|2023|post',
+//           target: 'mryan|graph1.suite.rc|2023|stop',
+//           label: 'mryan|graph1.suite.rc|post.2023|stop.2023',
+//           cond: false,
+//           suicide: false
+//         },
+//         {
+//           id: 'mryan|graph1.suite.rc|prep.2021|model.2021',
+//           source: 'mryan|graph1.suite.rc|2021|prep',
+//           target: 'mryan|graph1.suite.rc|2021|model',
+//           label: 'mryan|graph1.suite.rc|prep.2021|model.2021',
+//           cond: false,
+//           suicide: false
+//         },
+//         {
+//           id: 'mryan|graph1.suite.rc|model.2021|post.2021',
+//           source: 'mryan|graph1.suite.rc|2021|model',
+//           target: 'mryan|graph1.suite.rc|2021|post',
+//           label: 'mryan|graph1.suite.rc|model.2021|post.2021',
+//           cond: false,
+//           suicide: false
+//         }
+//       ]
+//     }
+//   }
+// }
 
 const QUERIES = {
   root: `
@@ -50,14 +130,22 @@ const QUERIES = {
           workflows(ids: ["WORKFLOW_ID"]) {
             id
             nodesEdges {
+              nodes {
+                id
+                label: id
+                parent: firstParent {
+                  id
+                  state
+                }
+                state
+              }
               edges {
                 id
                 source
                 target
-              }
-              nodes {
-                id
-                state
+                label: id
+                cond
+                suicide
               }
             }
           }
@@ -65,7 +153,33 @@ const QUERIES = {
     `
 }
 
-// activate when uiserver sends required properties
+// const QUERIES = {
+//   root: `
+//         {
+//         nodesEdges(workflows(ids: ["WORKFLOW_ID"]), states: ["submitted", "running", "failed", "waiting"], distance: 1) {
+//           nodes {
+//             id
+//             label: id
+//             parent: firstParent {
+//               id
+//               state
+//             }
+//             state
+//           }
+//           edges {
+//             id
+//             source
+//             target
+//             label: id
+//             cond
+//             suicide
+//           }
+//         }
+//       }
+//     `
+// }
+
+// // activate when uiserver sends required properties
 // const QUERIES = {
 //   root: `
 //         {
@@ -77,9 +191,6 @@ const QUERIES = {
 //                 source
 //                 target
 //                 label
-//                 suicide
-//                 cond
-
 //               }
 //               nodes {
 //                 id
@@ -94,6 +205,7 @@ const QUERIES = {
 //     `
 // }
 
+let isInit = true
 let ur = {}
 let layoutOptions = {}
 let tippy
@@ -468,6 +580,7 @@ export default {
       handler: function (newval, oldval) {
         console.log('watch workflows value: ', newval)
         this.workflowUpdated(newval)
+        // this.workflowUpdatedOffline(newval)
       },
       deep: true
     }
@@ -499,7 +612,8 @@ export default {
     this.$store.watch((store) => {
       console.log('MOUNTED WATCH -workflows: ', store.workflows)
       this.workflows = store.workflows
-    }
+    },
+    this.debouncer = debounce(this.updateGraph, 100)
     )
   },
 
@@ -513,7 +627,7 @@ export default {
         activeCallback: this.setActive
       }
     )
-    this.subscribe('root')
+    this.subscribe('root') // commented out for testing only
   },
 
   components: {
@@ -552,46 +666,144 @@ export default {
       console.log('Debouncing:')
     },
 
+    // async workflowUpdated (workflows) {
+    //   try {
+    //     console.log('workflowUpdated: ')
+    //     const gData = {
+    //       nodes: [],
+    //       edges: []
+    //     }
+
+    //     each(workflows, (value, key) => {
+    //       each(value, (workflow, key) => {
+    //         console.log('workflow.id: ', workflow.id)
+    //         console.log('workflow: ', JSON.stringify(workflow))
+    //         if (!isEmpty(workflow.nodesEdges)) {
+    //           const nodes = workflow.nodesEdges.nodes
+    //           const edges = workflow.nodesEdges.edges
+    //           gData.nodes = nodes
+    //           gData.edges = edges
+    //         }
+    //       })
+    //       console.log('')
+    //       return gData
+    //     })
+    //     isEmpty(gData) ? console.log('gData is empty or undefined') : this.validate(gData)
+    //   } catch (error) {
+    //     console.error('workflowUpdated error: ', error)
+    //   }
+    // },
+
     async workflowUpdated (workflows) {
       try {
-        console.log('workflowUpdated: ')
-        const gData = {
+        console.log('workflowUpdated')
+        const elements = {
           nodes: [],
           edges: []
         }
-
+        const gdata = {
+          nodes: [],
+          edges: []
+        }
+        // each(GRAPHDATA, (workflow, key) => {
         each(workflows, (value, key) => {
           each(value, (workflow, key) => {
-            console.log('workflow.id: ', workflow.id)
-            console.log('workflow: ', JSON.stringify(workflow))
-            if (!isEmpty(workflow.nodesEdges)) {
-              const nodes = workflow.nodesEdges.nodes
-              const edges = workflow.nodesEdges.edges
-              gData.nodes = nodes
-              gData.edges = edges
-            }
+            // if (has(workflow, 'id') && workflow.id === this.workflowId) {
+            gdata.edges = this.getEdges(workflow.nodesEdges.edges)
+            gdata.nodes = this.getNodes(workflow.nodesEdges.nodes)
+          // }
           })
-          console.log('')
-          return gData
         })
-        isEmpty(gData) ? console.log('gData is empty or undefined') : this.validate(gData)
+        elements.nodes = gdata.nodes.map(node => ({ id: node.id, label: node.label, state: node.state, runpercent: node.runpercent, parent: node.parent }))
+        elements.edges = gdata.edges.map(edge => ({ id: edge.id, source: edge.source, target: edge.target, label: edge.label }))
+        console.log('elements ==>>>> ', elements)
+        console.log('')
+        isEmpty(elements) ? console.log('gdata is empty or undefined') : this.graphData = elements
       } catch (error) {
         console.error('workflowUpdated error: ', error)
       }
     },
 
+    getNodes (nodes) {
+      try {
+        const nodesArray = []
+        let nodeObj = {
+          id: '',
+          runpercent: 0,
+          state: '',
+          parent: '',
+          label: ''
+        }
+        each(nodes, (node, key) => {
+          nodeObj = {
+            id: '',
+            runpercent: 0,
+            state: '',
+            parent: '',
+            label: ''
+          }
+          has(node, 'id') && !isEmpty(node.id) ? nodeObj.id = getUuid(node.id) : console.log('workflowUpdated -node id is empty')
+          has(node, 'label') && !isEmpty(node.label) ? nodeObj.label = node.label : console.log('workflowUpdated -node label is empty')
+          has(node, 'state') && !isEmpty(node.state) ? nodeObj.state = node.state : nodeObj.state = undefined
+          has(node, 'runpercent') && !isEmpty(node.runpercent) ? nodeObj.runpercent = node.runpercent : nodeObj.runpercent = 0
+          nodeObj.parent = ''
+          has(node.parent, 'id') && !isEmpty(node.parent.id) ? nodeObj.parent = getUuid(node.parent.id)
+            : console.log('workflowUpdated - node parent is empty')
+          nodesArray.push(nodeObj)
+        })
+        console.log('NODES ::: ', nodesArray)
+        return nodesArray
+      } catch (error) {
+        console.error('getNodes error: ', error)
+      }
+    },
+
+    getEdges (edges) {
+      try {
+        const edgesArray = []
+        let edgeObj = {
+          id: '',
+          source: '',
+          target: '',
+          label: ''
+        }
+        each(edges, (edge, key) => {
+          edgeObj = {
+            id: '',
+            source: '',
+            target: '',
+            label: ''
+          }
+          has(edge, 'id') && !isEmpty(edge.id) ? edgeObj.id = getUuid(edge.id) : console.log('workflowUpdated - edge id is empty')
+          has(edge, 'source') && !isEmpty(edge.source) ? edgeObj.source = getUuid(edge.source) : edgeObj.source = undefined
+          has(edge, 'target') && !isEmpty(edge.target) ? edgeObj.target = getUuid(edge.target) : edge.target = undefined
+          has(edge, 'label') && !isEmpty(edge.label) ? edgeObj.label = edge.label : edgeObj.label = ''
+          edgeObj.source !== undefined || edgeObj.target !== undefined ? edgesArray.push(edgeObj)
+            : console.log('skipping adding edge with empty source or target')
+          edgesArray.push(edgeObj)
+        })
+        console.log('EDGES ::: ', edgesArray)
+        return edgesArray
+      } catch (error) {
+        console.error('getEdges error: ', error)
+      }
+    },
+
     async validate (gdata) {
       try {
+        console.log('VALIDATE')
         const elements = {
           nodes: [],
           edges: []
         }
-        // elements.nodes = gdata.nodes.map(node => ({ id: node.id, label: node.label, state: node.state, runpercent: node.runpercent, parent: node.parent }))
-        // elements.edges = gdata.edges.map(edge => ({ id: edge.id, source: edge.source, target: edge.target, label: edge.label }))
-        elements.nodes = gdata.nodes.map(node => ({ id: node.id, state: node.state }))
-        elements.edges = gdata.edges.map(edge => ({ id: edge.id, source: edge.source, target: edge.target }))
+        elements.nodes = gdata.nodes.map(node => ({ id: node.id, label: node.label, state: node.state, runpercent: node.runpercent, parent: node.parent }))
+        elements.edges = gdata.edges.map(edge => ({ id: edge.id, source: edge.source, target: edge.target, label: edge.label }))
+        // elements.nodes = gdata.nodes.map(node => ({ id: node.id, state: node.state }))
+        // elements.edges = gdata.edges.map(edge => ({ id: edge.id, source: edge.source, target: edge.target }))
         console.log('elements: ', elements)
         this.graphData = elements
+        // this.graphData = gdata
+        // console.log('gdata: ', gdata)
       } catch (error) {
         console.error('validate error: ', error)
       }
@@ -620,8 +832,17 @@ export default {
     async initialData () {
       try {
         console.log('INITIAL DATA')
+        // TODO fix initial data
         this.graphData = {
-          nodes: [],
+          nodes: [
+            {
+              id: '0',
+              runpercent: 0,
+              state: 'waiting',
+              parent: '',
+              label: ''
+            }
+          ],
           edges: []
         }
       } catch (error) {
@@ -629,7 +850,7 @@ export default {
       }
     },
 
-    preConfig (cytoscape) {
+    async preConfig (cytoscape) {
       // cytoscape: this is the cytoscape constructor
       try {
         console.log('PRE-CONFIG')
@@ -637,12 +858,12 @@ export default {
         cytoscape.use(dagre)
         cytoscape.use(coseBilkent)
         cytoscape.use(klay)
+        const initialdata = await this.initialData()
         this.cy = cytoscape({
           container: document.getElementById('cytoscape'),
-          elements: this.graphData
+          elements: initialdata
         })
-        this.initialData()
-        this.debouncer = debounce(this.updateGraph, 100)
+        // this.debouncer = debounce(this.updateGraph, 100)
       } catch (error) {
         console.error('preConfig error: ', error)
       }
@@ -653,7 +874,9 @@ export default {
       // load graph data and run layout
         layoutOptions = dagreOptions
         expandCollapseOptions = expandCollapseOptionsUndefined
+        // TODO await initial graphdata!
         const loaded = await this.initialise(cy)
+        // const loaded = true
         loaded ? this.loading = false : console.log('there was an error loading the graph view')
       } catch (error) {
         console.log('afterCreated error', error)
@@ -702,6 +925,7 @@ export default {
 
     async updateConfig (data) {
       try {
+        console.log('UPDATE CONFIG DATA -> ', data)
         const config = {
           autounselectify: true,
           boxSelectionEnabled: true,
@@ -715,13 +939,14 @@ export default {
               selector: 'node',
               css: {
                 'background-image': function (node) {
-                  let path = this.iconFromState(node.data('state'))
+                  let path = ''
+                  has(node, 'state') ? path = this.iconFromState(node.data('state')) : path = 'baseline-donut_large-24px.svg'
                   path = require('@/../public/img/' + path)
                   return path
                 },
                 'background-fit': 'contain contain',
                 'background-image-opacity': function (node) {
-                  return node.data('running') > 0 ? 1.0 : 0.6
+                  return has(node.data, 'runpercent') && !isEmpty(node.data.runpercent) && node.data('runpercent') > 0 ? 1.0 : 0.6
                 },
                 'background-color': 'data(state)',
                 content: 'data(label)',
@@ -743,7 +968,7 @@ export default {
                 // 'pie-size': '5.6em', //The diameter of the pie, measured as a percent of node size (e.g. 100%) or an absolute length (e.g. 25px).
                 'pie-size': function (node) {
                   let size
-                  node.data('running') > 0 ? size = '5.6em' : size = '0%'
+                  has(node.data, 'runpercent') && !isEmpty(node.data.runpercent) && node.data('runpercent') > 0 ? size = '5.6em' : size = '0%'
                   return size
                 },
                 'pie-1-background-color': '#9ef9ff', // The colour of the node’s ith pie chart slice.
@@ -775,7 +1000,9 @@ export default {
                 'pie-9-background-opacity': 0.7,
                 'pie-10-background-color': '#cacaca',
                 'pie-10-background-size': 'mapData(runpercent, 0, 100, 0, 100)',
-                'pie-10-background-opacity': 0.7
+                'pie-10-background-opacity': 0.7,
+                'pie-11-background-size': 'mapData(undefined, 0, 100, 0, 100)',
+                'pie-11-background-opacity': 0.7
               }
             },
             {
@@ -944,10 +1171,10 @@ export default {
     async initialise (instance) {
       try {
         console.log('INITIALISING')
-        const stylesheet = await this.updateStyle(this.graphData)
+        const stylesheet = await this.updateStyle(this.initialData)
         instance = cytoscape({
           container: document.getElementById('cytoscape'),
-          elements: this.graphData,
+          elements: await this.initialData(),
           style: stylesheet.style
         })
         this.cy = await this.getGraph(instance)
@@ -984,18 +1211,25 @@ export default {
           tippy.hide()
         }
         const cy = this.cy
-        console.log('updateGraph data :: ', this.graphData)
         const elements = this.graphData
-        cy.elements().remove()
-        const stylesheet = await this.updateStyle(this.graphData)
-        cy.style().fromJson(stylesheet.style).update()
-        cy.add(elements)
-        this.getUndoRedo(cy)
-        cy.elements()
-          .layout(layoutOptions)
-          .run()
+        console.log('elements :: ', elements)
+        if (isInit) {
+          console.log('initial graph update, skip element removal and styling')
+          isInit = false
+        } else {
+          cy.elements().remove()
+          const stylesheet = await this.updateStyle(this.graphData)
+          cy.style().fromJson(stylesheet.style).update()
+          cy.add(elements)
+          this.getUndoRedo(cy)
+          cy.elements()
+            .layout(layoutOptions)
+            .run()
+        }
       } catch (error) {
-        console.log('updateGraph error: ', error)
+        // console.log('this.graphData: ', JSON.stringify(this.graphData))
+        console.log('this.graphData: ', this.graphData)
+        console.error('updateGraph error: ', error)
       }
     },
 
@@ -1106,8 +1340,8 @@ export default {
             content: () => {
               const content = document.createElement('div')
               const children = node.data('collapsedChildren')
-              let runpercent = ''
-              if (node.data('runpercent') !== undefined) {
+              let runpercent = 0
+              if (has(node.data, 'runpercent')) {
                 runpercent = parseInt(node.data('runpercent'))
               }
               let state = node.data('state')
