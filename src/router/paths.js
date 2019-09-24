@@ -1,3 +1,4 @@
+/* jshint esversion: 6, asi: true */
 import i18n from '@/i18n'
 
 /**
@@ -18,6 +19,15 @@ export default [
     path: '/graph/:workflowid',
     view: 'Graph',
     name: i18n.t('App.graph'),
+    meta: {
+      layout: 'default'
+    },
+    props: true
+  },
+  {
+    path: '/network/:workflowid',
+    view: 'Network',
+    name: i18n.t('App.network'),
     meta: {
       layout: 'default'
     },

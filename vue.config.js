@@ -1,3 +1,4 @@
+/* jshint esversion: 6, asi: true */
 // optional file, loaded automatically by @vue/cli-service if present next to package.json
 var webpack = require('webpack')
 
@@ -35,5 +36,7 @@ module.exports = {
       ? '@/services/mock/workflow.service.mock'
       : '@/services/workflow.service'
     config.resolve.alias.set('workflow-service', workflowService)
+    const networkService = '@/services/network.service'
+    config.resolve.alias.set('network-service', networkService)
   }
 }
