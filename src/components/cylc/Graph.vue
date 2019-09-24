@@ -475,7 +475,7 @@ export default {
   },
 
   mounted () {
-    console.log(`MOUNTED called, status: ${this.status}`)
+    console.debug(`MOUNTED called, status: ${this.status}`)
     this.handleMounted()
     this.$store.watch((store) => {
       this.workflows = store.workflows
@@ -484,7 +484,7 @@ export default {
   },
 
   created (cy) {
-    console.log('CREATED')
+    console.debug('CREATED')
     // |- websocket functionality ->
     // this.$options.sockets.onmessage = (msg) => this.messageReceived(msg)
     // --|
@@ -548,8 +548,8 @@ export default {
             })
           })
         }
-        // console.log('elements ==>>>> ', elements)
-        isEmpty(elements) ? console.log('gdata is empty or undefined') : this.graphData = elements
+        // console.debug('elements ==>>>> ', elements)
+        isEmpty(elements) ? console.warn('gdata is empty or undefined') : this.graphData = elements
       } catch (error) {
         console.error('workflowUpdated error: ', error)
       }
@@ -583,12 +583,14 @@ export default {
             grabbable: true,
             classes: ''
           }
-          has(node, 'id') && !isEmpty(node.id) ? nodeObj.data.id = getUuid(node.id) : console.log('workflowUpdated - node id is empty')
-          has(node, 'label') && !isEmpty(node.label) ? nodeObj.data.label = node.label : console.log('workflowUpdated - node label is empty')
+          has(node, 'id') && !isEmpty(node.id) ? nodeObj.data.id = getUuid(node.id) : console.warn('workflowUpdated - node id is empty')
+          has(node, 'label') && !isEmpty(node.label) ? nodeObj.data.label = node.label : console.warn('workflowUpdated - node label is empty')
           has(node, 'state') && !isEmpty(node.state) ? nodeObj.data.state = node.state : nodeObj.state = 'undefined'
-          if (has(node.parent, 'id') && !isEmpty(node.parent.id)) {
-            parentId = getUuid(node.parent.id)
-            nodeObj.data.parent = parentId
+          if (has(node, 'runpercent') && !isEmpty(node.runpercent) && (parseInt(node.runpercent) > 0)) {
+            nodeObj.data.runpercent = parseInt(node.runpercent)
+            nodeObj.running = nodeObj.data.runpercent
+            todo = 100 - parseInt(nodeObj.data.runpercent)
+            nodeObj.data.todo = todo
           }
           if (has(node, 'runpercent') && !isEmpty(node.runpercent) && (parseInt(node.runpercent) > 0)) {
             nodeObj.data.runpercent = parseInt(node.runpercent)
@@ -596,9 +598,13 @@ export default {
             todo = (100 - parseInt(node.runpercent))
             nodeObj.data.todo = todo
           }
+          if (has(node.parent, 'id') && !isEmpty(node.parent.id)) {
+            parentId = getUuid(node.parent.id)
+            nodeObj.data.parent = parentId
+          }
           nodesArray.push(nodeObj)
         })
-        console.log('NODES ::: ', nodesArray)
+        console.debug('NODES ::: ', nodesArray)
         return nodesArray
       } catch (error) {
         console.error('getNodes error: ', error)
@@ -628,25 +634,19 @@ export default {
             grabbable: true,
             classes: ''
           }
-          has(edge, 'id') && !isEmpty(edge.id) ? edgeObj.data.id = getUuid(edge.id) : console.log('workflowUpdated - edge id is empty')
+          has(edge, 'id') && !isEmpty(edge.id) ? edgeObj.data.id = getUuid(edge.id) : console.debug('workflowUpdated - edge id is empty')
           has(edge, 'source') && !isEmpty(edge.source) ? edgeObj.data.source = getUuid(edge.source) : edgeObj.source = undefined
           has(edge, 'target') && !isEmpty(edge.target) ? edgeObj.data.target = getUuid(edge.target) : edge.target = undefined
           has(edge, 'label') && !isEmpty(edge.label) ? edgeObj.data.label = edge.label : edgeObj.label = ''
           edgeObj.data.source !== undefined || edgeObj.data.target !== undefined ? edgesArray.push(edgeObj)
-            : console.log('skipping adding edge with empty source or target')
+            : console.debug('skipping adding edge with empty source or target')
         })
-        // console.log('EDGES ::: ', edgesArray)
+        // console.debug('EDGES ::: ', edgesArray)
         return edgesArray
       } catch (error) {
         console.error('getEdges error: ', error)
       }
     },
-
-    // for websocket functionality
-    // async messageReceived (msg) {
-    //   console.log('graph view messageRecieved: ', msg)
-    //   this.graphData = JSON.parse(msg.data) // update via watcher
-    // },
 
     changeLayout (value) {
       this.layoutName = value
@@ -664,7 +664,7 @@ export default {
     async preConfig (cytoscape) {
       // cytoscape: this is the cytoscape constructor
       try {
-        console.log('PRE-CONFIG')
+        console.debug('PRE-CONFIG')
         cytoscape.use(cola)
         cytoscape.use(dagre)
         cytoscape.use(coseBilkent)
@@ -685,9 +685,9 @@ export default {
         layoutOptions = dagreOptions
         expandCollapseOptions = expandCollapseOptionsUndefined
         const loaded = await this.initialise(cy)
-        loaded ? this.loading = false : console.log('there was an error loading the graph view')
+        loaded ? this.loading = false : console.error('there was an error loading the graph view')
       } catch (error) {
-        console.log('afterCreated error', error)
+        console.error('afterCreated error', error)
       }
     },
 
@@ -695,31 +695,31 @@ export default {
       try {
         // register extensions
         if (typeof cytoscape('core', 'navigator') !== 'function') {
-          console.log('registering navigator')
+          console.debug('registering navigator')
           navigator(cytoscape)
         }
 
         if (typeof cytoscape('core', 'panzoom') !== 'function') {
-          console.log('registering panzoom')
+          console.debug('registering panzoom')
           panzoom(cytoscape)
         }
 
         if (typeof cytoscape('core', 'undoRedo') !== 'function') {
-          console.log('registering undoRedo')
+          console.debug('registering undoRedo')
           undoRedo(cytoscape)
         }
 
         if (typeof cytoscape('core', 'expandCollapse') !== 'function') {
-          console.log('registering expandCollapse with jquery')
+          console.debug('registering expandCollapse with jquery')
           expandCollapse(cytoscape, jquery)
         }
 
         if (typeof cytoscape('core', 'popper') !== 'function') {
-          console.log('registering popper')
+          console.debug('registering popper')
           popper(cytoscape)
         }
       } catch (error) {
-        console.log('registerExtensions error', error)
+        console.error('registerExtensions error', error)
       }
     },
 
@@ -727,7 +727,7 @@ export default {
       try {
         return this.updateConfig(data)
       } catch (error) {
-        console.log('updateStyle error: ', error)
+        console.error('updateStyle error: ', error)
       }
     },
 
@@ -874,7 +874,7 @@ export default {
 
         return config
       } catch (error) {
-        console.log('config error: ', error)
+        console.error('config error: ', error)
       }
     },
 
@@ -887,7 +887,7 @@ export default {
           .run()
         return instance
       } catch (error) {
-        console.log('runlayout error: ', error)
+        console.error('runlayout error: ', error)
       }
     },
 
@@ -896,7 +896,7 @@ export default {
         ur = instance.undoRedo()
         return ur
       } catch (error) {
-        console.log('setupUndo error', error)
+        console.error('setupUndo error', error)
       }
     },
 
@@ -907,13 +907,13 @@ export default {
         layoutOptions = dagreOptions
         return instance
       } catch (error) {
-        console.log('setupExpandCollapse error', error)
+        console.error('setupExpandCollapse error', error)
       }
     },
 
     async initialise (instance) {
       try {
-        console.log('INITIALISING')
+        console.debug('INITIALISING')
         const stylesheet = await this.updateStyle(this.graphData)
         instance = cytoscape({
           container: document.getElementById('cytoscape'),
@@ -925,13 +925,13 @@ export default {
         this.activateKeys(instance)
         return true
       } catch (error) {
-        console.log('initialise error', error)
+        console.error('initialise error', error)
       }
     },
 
     async getGraph (instance) {
       try {
-        console.log('GETGRAPH')
+        console.debug('GETGRAPH')
         await this.registerExtensions()
         layoutOptions = dagreOptions
         await this.runlayout(instance)
@@ -943,7 +943,7 @@ export default {
         this.getUndoRedo(instance)
         return instance
       } catch (error) {
-        console.log('getGraph error', error)
+        console.error('getGraph error', error)
       }
     },
 
@@ -962,7 +962,6 @@ export default {
           .layout(layoutOptions)
           .run()
       } catch (error) {
-        console.log('this.graphData: ', this.graphData)
         console.error('updateGraph error: ', error)
       }
     },
@@ -992,7 +991,7 @@ export default {
         instance.panzoom(panzoomdefaults)
         return instance.panzoom
       } catch (error) {
-        console.log('getPanzoom error', error)
+        console.error('getPanzoom error', error)
       }
     },
 
@@ -1009,7 +1008,7 @@ export default {
         })
         return instance.navigator
       } catch (error) {
-        console.log('getPanzoom error', error)
+        console.error('getPanzoom error', error)
       }
     },
 
@@ -1028,7 +1027,7 @@ export default {
         instance.undoRedo(undoRedoOptions)
         return instance.undoRedo
       } catch (error) {
-        console.log('getUndoRedo error', error)
+        console.error('getUndoRedo error', error)
       }
     },
 
@@ -1067,7 +1066,7 @@ export default {
 
         instance.on('tap', 'node', (event) => {
           const node = event.target
-          console.log('tapped ' + node.id(), node.data())
+          console.debug('tapped ' + node.id(), node.data())
           const ref = node.popperRef()
           // using tippy ^4.0.0
           tippy = new Tippy(ref, {
@@ -1129,7 +1128,7 @@ export default {
 
         instance.on('tap', 'edge', (event) => {
           const edge = event.target
-          console.log('tapped ' + edge.id(), edge.data())
+          console.debug('tapped ' + edge.id(), edge.data())
           edge.addClass('selected')
           const ref = edge.popperRef()
           tippy = new Tippy(ref, {
@@ -1179,7 +1178,7 @@ export default {
           }
         })
       } catch (error) {
-        console.log('getInteractivity error', error)
+        console.error('getInteractivity error', error)
       }
     },
 
@@ -1240,18 +1239,18 @@ export default {
             break
         }
       } catch (error) {
-        console.log('updateLayout error', error)
+        console.error('updateLayout error', error)
       }
     },
 
     doLayout (layoutOptions, expandCollapseOptions, collapse = false) {
       try {
-        collapse ? ur.do('collapseAll') : console.log('not collapsing this layout')
+        collapse ? ur.do('collapseAll') : console.warn('not collapsing this layout')
         this.cy.elements()
           .layout(layoutOptions)
           .run()
       } catch (error) {
-        console.log('doLayout error', error)
+        console.error('doLayout error', error)
       }
     },
 

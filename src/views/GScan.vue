@@ -49,22 +49,8 @@
               <td>{{ item.host }}</td>
               <td>{{ item.port }}</td>
               <td class="justify-center">
-                <v-icon
-                    small
-                    class="mr-2"
-                    @click="viewWorkflow(item)"
-                >
-                  mdi-table-edit
-                </v-icon>
-              </td>
-              <td class="justify-center">
-                <v-icon
-                    small
-                    class="mr-2"
-                    @click="viewGraph(item)"
-                >
-                  mdi-vector-polyline
-                </v-icon>
+                <v-icon small class="mr-2" @click="viewWorkflow(item)">mdi-table-edit</v-icon>
+                <v-icon small class="mr-2" @click="viewGraph(item)">mdi-vector-polyline</v-icon>
               </td>
             </template>
           </v-data-table>
