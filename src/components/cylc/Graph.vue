@@ -570,7 +570,8 @@ export default {
               label: '',
               shape: 'ellipse',
               runpercent: 0,
-              todo: 0
+              todo: 0,
+              running: 0
             },
             position: {
 
@@ -793,7 +794,7 @@ export default {
             {
               selector: 'edge',
               css: {
-                width: 5,
+                width: 2,
                 'curve-style': 'bezier',
                 'target-arrow-shape': 'triangle',
                 'line-color': edgeOptions.normal.lineColor,
@@ -805,7 +806,7 @@ export default {
             {
               selector: 'edge.selected',
               style: {
-                width: 10,
+                width: 4,
                 lineColor: edgeOptions.selected.lineColor,
                 'target-arrow-color': edgeOptions.selected.lineColor
               }
