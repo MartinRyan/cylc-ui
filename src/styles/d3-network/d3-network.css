@@ -1,16 +1,16 @@
 #holder {
     width: 100%;
     height: 800px;
-    background-color: #222;
+    background-color: #fff;
     z-index: 1;
   }
-  #app {
-    font-family: 'Avenir', Helvetica, Arial, sans-serif;
-    text-align: left;
-    color: #2c3e50;
-    margin-top: 0;
-    width: 100%;
-  }
+
+#app {
+  text-align: left;
+  color: #2c3e50;
+  margin-top: 0;
+  width: 100%;
+}
   
   .spinner {
     position: fixed;
@@ -22,4 +22,27 @@
   .collapsed-child {
     opacity: 0;
     display: none
-    }
+  }
+
+  .title {
+    position: absolute;
+    text-align: center;
+    left: 2em;
+  }
+  h1,
+  a {
+    color: #1aad8d;
+    text-decoration: none;
+  }
+  
+  ul.menu {
+    list-style: none;
+    position: absolute;
+    z-index: 100;
+    min-width: 20em;
+    text-align: left;
+  }
+  ul.menu li {
+    margin-top: 1em;
+    position: relative;
+  }

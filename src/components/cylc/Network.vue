@@ -406,31 +406,4 @@ export default {
 
 <style>
 @import '~@/styles/d3-network/d3-network.css';
-
-body {
-  font-family: 'PT Sans', sans-serif;
-  background-color: #fff;
-}
-.title {
-  position: absolute;
-  text-align: center;
-  left: 2em;
-}
-h1,
-a {
-  color: #1aad8d;
-  text-decoration: none;
-}
-
-ul.menu {
-  list-style: none;
-  position: absolute;
-  z-index: 100;
-  min-width: 20em;
-  text-align: left;
-}
-ul.menu li {
-  margin-top: 1em;
-  position: relative;
-}
 </style>

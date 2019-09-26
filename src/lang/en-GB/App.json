@@ -2,6 +2,7 @@
   "name": "Cylc UI",
   "dashboard": "Dashboard",
   "graph": "Graph",
+  "network": "D3 Network",
   "workflow": "Workflow {name}",
   "workflows": "Workflows",
   "notFound": "Not Found",

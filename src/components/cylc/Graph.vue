@@ -3,11 +3,11 @@
     <SyncLoader :loading='loading' :color='color' :size='size' class='spinner'></SyncLoader>
     <div class='switchlayout'>
       <div>
-      <v-btn id='dagre-button' name='dagre' align-center justify-center :depressed='true' class='dagre-button' @click='switchLayout("dagre", $event)'>DAGRE</v-btn>
-      <v-btn id='cosebilkent-button' name='cose-bilkent' align-center justify-center :depressed='true' class='cosebilkent-button' @click='switchLayout("cose-bilkent", $event)'>COSE-BILKENT</v-btn>
-      <v-btn id='klay-button' align-center justify-center :depressed='true' class='klay-button' @click='switchLayout("klay", $event)'>KLAY</v-btn>
-      <v-btn id='hierarchical-button' align-center justify-center :depressed='true' class='hierarchical-button' @click='switchLayout("hierarchical", $event)'>HIERARCHICAL</v-btn>
-      <v-btn id='cola-button' name='cola' align-center justify-center :depressed='false' class='cola-button' @click='switchLayout("cola", $event)'>COLA</v-btn>
+      <v-btn id='dagre-button' small align-center justify-center :outlined='true' name='dagre' class='dagre-button' @click='switchLayout("dagre", $event)'>DAGRE</v-btn>
+      <v-btn id='cosebilkent-button' small name='cose-bilkent' align-center justify-center :outlined='true' class='cosebilkent-button' @click='switchLayout("cose-bilkent", $event)'>COSE-BILKENT</v-btn>
+      <v-btn id='klay-button' small align-center justify-center :outlined='true' class='klay-button' @click='switchLayout("klay", $event)'>KLAY</v-btn>
+      <v-btn id='hierarchical-button' small align-center justify-center :outlined='true' class='hierarchical-button' @click='switchLayout("hierarchical", $event)'>HIERARCHICAL</v-btn>
+      <v-btn id='cola-button' small name='cola' align-center justify-center :outlined='true' class='cola-button' @click='switchLayout("cola", $event)'>COLA</v-btn>
       </div>
     </div>
     <div class='cytoscape-navigator-overlay'>
@@ -15,8 +15,8 @@
       <div class='cytoscape-navigatorView'></div>
       <div class='cytoscape-navigatorOverlay'></div>
     </div>
-    <b id='collapseAll' class='collapseAll' style='cursor: pointer; color: white' @click='collapseAll()'>collapse all</b> :
-    <b id='change' style='color: white'>layout: {{layoutName}}</b>
+    <b id='collapseAll' class='collapseAll' style='cursor: pointer; color: #555' @click='collapseAll()'>collapse all</b> :
+    <b id='change' style='color: #555'>layout: {{layoutName}}</b>
     <cytoscape id='cytoscape' :pre-config='preConfig' :after-created='afterCreated' :debug='true'>
     </cytoscape>
   </div>
@@ -91,10 +91,10 @@ const nodeOptions = {
 
 const edgeOptions = {
   normal: {
-    lineColor: '#fff'
+    lineColor: '#111'
   },
   selected: {
-    lineColor: 'yellow'
+    lineColor: 'blue'
   }
 }
 const config = {}
@@ -132,7 +132,7 @@ const dagreOptions = {
   fit: true, // whether to fit to viewport
   padding: 150, // fit padding
   spacingFactor: 1.2, // Applies a multiplicative factor (>0) to expand or compress the overall area that the nodes take up
-  animate: false, // whether to transition the node positions
+  animate: true, // whether to transition the node positions
   animationDuration: 500, // duration of animation in ms if enabled
   animationEasing: undefined, // easing of animation if enabled
   boundingBox: undefined, // constrain layout bounds { x1, y1, x2, y2 } or { x1, y1, w, h }
@@ -766,7 +766,7 @@ export default {
                 },
                 content: 'data(label)',
                 'font-family': 'Avenir, Helvetica, Arial, sans-serif',
-                color: '#fff',
+                color: '#333',
                 'text-max-width': '.5em',
                 'text-wrap': 'wrap',
                 'text-valign': 'top',
@@ -775,8 +775,8 @@ export default {
                 'text-margin-x': 5,
                 'font-size': '.8em',
                 'min-zoomed-font-size': '.8em',
-                'border-color': '#fff',
-                'border-width': '.4em',
+                'border-color': '#333',
+                'border-width': '.1em',
                 shape: 'data(shape)',
                 width: '6em',
                 height: '6em',
@@ -797,7 +797,7 @@ export default {
                 'curve-style': 'bezier',
                 'target-arrow-shape': 'triangle',
                 'line-color': edgeOptions.normal.lineColor,
-                'target-arrow-color': '#fff',
+                'target-arrow-color': '#222',
                 opacity: 0.8,
                 'target-distance-from-node': 10
               }
