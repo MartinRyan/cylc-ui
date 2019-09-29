@@ -38,5 +38,7 @@ module.exports = {
     config.resolve.alias.set('workflow-service', workflowService)
     const networkService = '@/services/network.service'
     config.resolve.alias.set('network-service', networkService)
+    const sigmaService = '@/services/sigma.service'
+    config.resolve.alias.set('sigma-service', sigmaService)
   }
 }

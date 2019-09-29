@@ -1,3 +1,4 @@
+/* jshint esversion: 6, asi: true */
 // The Vue build version to load with the `import` command
 // (runtime-only or standalone) has been set in webpack.base.conf with an alias.
 import Vue from 'vue'
@@ -19,8 +20,9 @@ import store from '@/store'
 
 // GraphQL
 import VueApollo from 'vue-apollo'
-
 import apolloClient from '@/utils/graphql'
+import sigma from 'sigma'
+Vue.prototype.$sigma = sigma
 
 const apolloProvider = new VueApollo({
   defaultClient: apolloClient

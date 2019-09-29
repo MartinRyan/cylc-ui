@@ -1,0 +1,33 @@
+#holder {
+  width: 1200px;
+  height: 800px;
+  background-color: #fff;
+  z-index: 1;
+}
+
+#sigma-container {
+  position: absolute;
+  width: 1200px;
+  height: 800px;
+  background-color: #fff;
+  z-index: 2;
+}
+
+#app {
+  text-align: left;
+  color: #2c3e50;
+  margin-top: 0;
+  width: 100%;
+}
+  
+.spinner {
+  position: fixed;
+  top: 50%;
+  left: 54%;
+  z-index: 99;
+}
+
+.collapsed-child {
+  opacity: 0;
+  display: none
+}

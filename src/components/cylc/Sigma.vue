@@ -7,15 +7,8 @@
         <input type='range' min='1' max='100' v-model='nodeSize' />
         {{ options.nodeSize }}
       </li>
-      <li>
-        <label>Render as</label>
-        <input type='radio' :value='false' v-model='canvas' />
-        <label>SVG</label>
-        <input type='radio' :value='true' v-model='canvas' />
-        <label>Canvas</label>
-      </li>
     </ul>
-    <d3-network :net-nodes='graphData.nodes' :net-links='graphData.edges' :options='options' />
+    <div id='sigma-container' :options='options' :pre-config='preConfig'></div>
   </div>
 </template>
 
@@ -24,10 +17,26 @@ import SyncLoader from 'vue-spinner/src/SyncLoader.vue'
 import getUuid from 'uuid-by-string'
 import { mixin } from '@/mixins/index'
 import { debounce, each, has, isEmpty, isUndefined } from 'lodash'
-import networkService from '@/services/network.service'
-// import { mapState } from 'vuex'
+import sigmaService from '@/services/sigma.service'
 import Tippy from 'tippy.js'
-import D3Network from 'vue-d3-network'
+import sigma from 'sigma'
+import Vue from 'vue'
+Vue.prototype.$sigma = sigma
+
+const sigmadata = {
+  nodes: [
+    { id: 'n0', label: 'A node', x: 0, y: 0, size: 3, color: '#008cc2' },
+    { id: 'n1', label: 'Another node', x: 3, y: 1, size: 2, color: '#008cc2' },
+    { id: 'n2', label: 'And a last one', x: 1, y: 3, size: 1, color: '#E57821' }
+  ],
+  edges: [
+    { id: 'e0', source: 'n0', target: 'n1', color: '#282c34', type: 'line', size: 0.5 },
+    { id: 'e1', source: 'n1', target: 'n2', color: '#282c34', type: 'curve', size: 1 },
+    { id: 'e2', source: 'n2', target: 'n0', color: '#FF0000', type: 'line', size: 2 }
+  ]
+}
+
+let s
 
 const STATES = Object.freeze({
   expired: { state: 'expired', icon: 'baseline-donut_large-24px.svg', colour: '#fefaff' },
@@ -75,7 +84,7 @@ const QUERIES = {
 let tippy
 
 export default {
-  name: 'Network',
+  name: 'Sigma',
   data: function () {
     return {
       // vue-spinner
@@ -117,10 +126,8 @@ export default {
     options () {
       return {
         force: 3000,
-        size: { w: 1200, h: 900 },
+        // size: { w: 1200, h: 800 },
         nodeSize: this.nodeSize,
-        nodeLabels: true,
-        linkLabels: true,
         canvas: this.canvas
       }
     }
@@ -130,12 +137,12 @@ export default {
 
   metaInfo () {
     return {
-      title: this.getPageTitle('App.network', { name: this.workflowId })
+      title: this.getPageTitle('App.sigma', { name: this.workflowId })
     }
   },
 
   beforeDestroy () {
-    networkService.unregister(this)
+    sigmaService.unregister(this)
   },
 
   beforeRouteLeave (to, from, next) {
@@ -146,6 +153,7 @@ export default {
   },
 
   mounted () {
+    console.debug('SIGMA')
     console.debug(`MOUNTED called, status: ${this.status}`)
     this.debouncer = debounce(this.updateGraph, 100)
     this.loading = false
@@ -158,18 +166,18 @@ export default {
   created () {
     console.debug('CREATED')
     this.workflowId = this.$route.params.workflowid
-    networkService.register(this)
+    sigmaService.register(this)
     this.subscribe('root')
   },
 
   components: {
-    SyncLoader,
-    D3Network
+    SyncLoader
+    // sigma
   },
 
   methods: {
     subscribe (queryName) {
-      const id = networkService.subscribe(
+      const id = sigmaService.subscribe(
         this,
         QUERIES[queryName].replace('WORKFLOW_ID', this.workflowId)
       )
@@ -180,7 +188,16 @@ export default {
 
     unsubscribe (queryName) {
       if (queryName in this.subscriptions) {
-        networkService.unsubscribe(this.subscriptions[queryName].id)
+        sigmaService.unsubscribe(this.subscriptions[queryName].id)
+      }
+    },
+
+    async preConfig (sigma) {
+      try {
+        console.debug('PRE-CONFIG')
+        this.debouncer = debounce(this.updateGraph, 100)
+      } catch (error) {
+        console.error('preConfig error: ', error)
       }
     },
 
@@ -204,7 +221,7 @@ export default {
           each(workflows, (value, key) => {
             each(value, (workflow, key) => {
               if (has(workflow.nodesEdges, 'edges') && !isUndefined(workflow.nodesEdges.edges)) {
-                elements.edges = this.getEdges(workflow.nodesEdges.edges) // d3 calls edges links
+                elements.edges = this.getEdges(workflow.nodesEdges.edges)
               }
               if (has(workflow.nodesEdges, 'nodes') && !isUndefined(workflow.nodesEdges.nodes)) {
                 elements.nodes = this.getNodes(workflow.nodesEdges.nodes)
@@ -212,9 +229,10 @@ export default {
             })
           })
         }
-        console.debug('elements ==>>>> ', elements)
         if (!isEmpty(elements)) {
-          this.graphData = elements
+          console.debug('elements ==>>>> ', elements)
+          //   this.graphData = elements
+          this.updateGraph(elements)
         }
       } catch (error) {
         console.error('workflowUpdated error: ', error)
@@ -288,8 +306,8 @@ export default {
             id: '',
             source: '',
             target: '',
-            _svgAttrs: { 'stroke-width': 8, opacity: 1 },
             label: '',
+            type: 'line',
             position: {
             },
             value: 1,
@@ -303,10 +321,8 @@ export default {
           has(edge, 'id') && !isEmpty(edge.id) ? edgeObj.id = getUuid(edge.id) : console.debug('workflowUpdated - edge id is empty')
           has(edge, 'source') && !isEmpty(edge.source) ? edgeObj.source = getUuid(edge.source) : edgeObj.source = undefined
           has(edge, 'target') && !isEmpty(edge.target) ? edgeObj.target = getUuid(edge.target) : edge.target = undefined
-          has(edge, 'source') && !isEmpty(edge.source) ? edgeObj.sid = getUuid(edge.source) : edgeObj.sid = undefined
-          has(edge, 'target') && !isEmpty(edge.target) ? edgeObj.tid = getUuid(edge.target) : edge.tid = undefined
           has(edge, 'label') && !isEmpty(edge.label) ? edgeObj.name = edge.label : edgeObj.name = ''
-          edgeObj.sid !== undefined || edgeObj.tid !== undefined ? edgesArray.push(edgeObj)
+          edgeObj.source !== undefined || edgeObj.target !== undefined ? edgesArray.push(edgeObj)
             : console.debug('skipping adding edge with empty source or target')
         })
         // console.debug('EDGES ::: ', edgesArray)
@@ -316,16 +332,48 @@ export default {
       }
     },
 
-    async updateGraph () {
+    async updateGraph (elements) {
       try {
         console.log('UPDATE GRAPH')
+        const g = {
+            nodes: [],
+            edges: []
+        }
         if (tippy) {
           tippy.hide()
         }
-        if (!isEmpty(this.graphdata)) {
-          console.debug('GRAPH DATA ===> ', this.graphdata)
-          this.nodes = this.graphData.nodes
-          this.edges = this.graphData.edges
+        if (!isEmpty(elements)) {
+          console.debug('GRAPH DATA ===> ', elements)
+          this.nodes = elements.nodes
+          this.edges = elements.edges
+        //   s = new sigma({
+        //     graph: g,
+        //     container: 'sigma-container',
+        //     renderer: {
+        //         container: document.getElementById('sigma-container'),
+        //         type: 'canvas'
+        //     },
+        //     settings: {
+        //     minEdgeSize: 0.1,
+        //     maxEdgeSize: 2,
+        //     minNodeSize: 1,
+        //     maxNodeSize: 8
+        //     }
+        // })
+
+        // sigma.parsers.json(graphdata, s, function() {
+        // // this below adds x, y attributes as well as size = degree of the node 
+        //     let i, nodes = s.graph.nodes(), len = nodes.length;
+        //     for (i = 0; i < len; i++) {
+        //         nodes[i].x = Math.random();
+        //         nodes[i].y = Math.random();
+        //         nodes[i].size = s.graph.degree(nodes[i].id);
+        //         nodes[i].color = nodes[i].center ? '#333' : '#666';
+        //     }
+        //     s.refresh();
+        //     // s.startForceAtlas2();
+        // }
+        // ) 
         }
       } catch (error) {
         console.error('updateGraph error: ', error)
@@ -405,5 +453,5 @@ export default {
 </script>
 
 <style>
-@import '~@/styles/d3-network/d3-network.css';
+@import '~@/styles/sigma/sigma.css';
 </style>

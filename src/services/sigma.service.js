@@ -1,7 +1,7 @@
 /* jshint esversion: 6, asi: true */
 import { GQuery } from '@/services/gquery'
 
-class NetworkGQueryService extends GQuery {
+class SigmaGQueryService extends GQuery {
   constructor () {
     super()
     this.polling = null
@@ -23,5 +23,5 @@ class NetworkGQueryService extends GQuery {
   }
 }
 
-const networkService = new NetworkGQueryService()
-export default networkService
+const sigmaService = new SigmaGQueryService()
+export default sigmaService

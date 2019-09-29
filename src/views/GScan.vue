@@ -52,6 +52,7 @@
                 <v-icon small class="mr-2" @click="viewWorkflow(item)">mdi-table-edit</v-icon>
                 <v-icon small class="mr-2" @click="viewGraph(item)">mdi-vector-polyline</v-icon>
                 <v-icon small class="mr-2" @click="viewNetwork(item)">mdi-graphql</v-icon>
+                <v-icon small class="mr-2" @click="viewSigma(item)">mdi-vector-polygon</v-icon>
               </td>
             </template>
           </v-data-table>
@@ -155,6 +156,10 @@ export default {
 
     viewNetwork (workflow) {
       this.$router.push({ path: `/network/${workflow.id}` })
+    },
+
+    viewSigma (workflow) {
+      this.$router.push({ path: `/sigma/${workflow.id}` })
     },
 
     subscribe (queryName) {

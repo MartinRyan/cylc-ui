@@ -34,6 +34,15 @@ export default [
     props: true
   },
   {
+    path: '/sigma/:workflowid',
+    view: 'Sigma',
+    name: i18n.t('App.sigma'),
+    meta: {
+      layout: 'default'
+    },
+    props: true
+  },
+  {
     path: '/workflows',
     name: i18n.t('App.workflows'),
     view: 'GScan',
