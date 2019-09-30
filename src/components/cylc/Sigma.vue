@@ -1,5 +1,5 @@
 <template>
-  <div id='holder'>
+  <div id='container'>
     <SyncLoader :loading='loading' :color='color' :size='size' class='spinner'></SyncLoader>
     <ul class='menu'>
       <li>
@@ -22,19 +22,6 @@ import Tippy from 'tippy.js'
 import sigma from 'sigma'
 import Vue from 'vue'
 Vue.prototype.$sigma = sigma
-
-const sigmadata = {
-  nodes: [
-    { id: 'n0', label: 'A node', x: 0, y: 0, size: 3, color: '#008cc2' },
-    { id: 'n1', label: 'Another node', x: 3, y: 1, size: 2, color: '#008cc2' },
-    { id: 'n2', label: 'And a last one', x: 1, y: 3, size: 1, color: '#E57821' }
-  ],
-  edges: [
-    { id: 'e0', source: 'n0', target: 'n1', color: '#282c34', type: 'line', size: 0.5 },
-    { id: 'e1', source: 'n1', target: 'n2', color: '#282c34', type: 'curve', size: 1 },
-    { id: 'e2', source: 'n2', target: 'n0', color: '#FF0000', type: 'line', size: 2 }
-  ]
-}
 
 let s
 
@@ -213,7 +200,7 @@ export default {
     async workflowUpdated (workflows) {
       console.debug('WORKFLOWS UPDATED')
       try {
-        const elements = {
+        let elements = {
           nodes: [],
           edges: []
         }
@@ -230,12 +217,47 @@ export default {
           })
         }
         if (!isEmpty(elements)) {
+          elements = this.getRandomGraphData() // random test
           console.debug('elements ==>>>> ', elements)
-          //   this.graphData = elements
+          // this.updateGraph(elements)
           this.updateGraph(elements)
         }
       } catch (error) {
         console.error('workflowUpdated error: ', error)
+      }
+    },
+
+    getRandomGraphData () {
+      try {
+        let i
+        const N = 100
+        const E = 500
+        const g = {
+          nodes: [],
+          edges: []
+        }
+        for (i = 0; i < N; i++) {
+          g.nodes.push({
+            id: `n${i}`,
+            label: `Node ${i}`,
+            x: Math.random(),
+            y: Math.random(),
+            size: Math.random(),
+            color: '#666'
+          })
+        }
+        for (i = 0; i < E; i++) {
+          g.edges.push({
+            id: `e${i}`,
+            source: `n${Math.random() * N | 0}`,
+            target: `n${Math.random() * N | 0}`,
+            size: Math.random(),
+            color: '#ccc'
+          })
+        }
+        return g
+      } catch (error) {
+        console.error('getRandomGraphData error: ', error)
       }
     },
 
@@ -336,8 +358,8 @@ export default {
       try {
         console.log('UPDATE GRAPH')
         const g = {
-            nodes: [],
-            edges: []
+          nodes: [],
+          edges: []
         }
         if (tippy) {
           tippy.hide()
@@ -346,23 +368,25 @@ export default {
           console.debug('GRAPH DATA ===> ', elements)
           this.nodes = elements.nodes
           this.edges = elements.edges
-        //   s = new sigma({
-        //     graph: g,
-        //     container: 'sigma-container',
-        //     renderer: {
-        //         container: document.getElementById('sigma-container'),
-        //         type: 'canvas'
-        //     },
-        //     settings: {
-        //     minEdgeSize: 0.1,
-        //     maxEdgeSize: 2,
-        //     minNodeSize: 1,
-        //     maxNodeSize: 8
-        //     }
-        // })
+          /* eslint new-cap: [0] */
+          s = new sigma({
+            graph: g,
+            container: 'sigma-container',
+            renderer: {
+              container: document.getElementById('sigma-container'),
+              type: 'canvas'
+            },
+            settings: {
+              minEdgeSize: 0.1,
+              maxEdgeSize: 2,
+              minNodeSize: 1,
+              maxNodeSize: 8
+            }
+          })
+          s.refresh()
 
         // sigma.parsers.json(graphdata, s, function() {
-        // // this below adds x, y attributes as well as size = degree of the node 
+        // // this below adds x, y attributes as well as size = degree of the node
         //     let i, nodes = s.graph.nodes(), len = nodes.length;
         //     for (i = 0; i < len; i++) {
         //         nodes[i].x = Math.random();
@@ -370,10 +394,10 @@ export default {
         //         nodes[i].size = s.graph.degree(nodes[i].id);
         //         nodes[i].color = nodes[i].center ? '#333' : '#666';
         //     }
-        //     s.refresh();
-        //     // s.startForceAtlas2();
+          // s.refresh()
+        //   s.startForceAtlas2();
         // }
-        // ) 
+        // )
         }
       } catch (error) {
         console.error('updateGraph error: ', error)

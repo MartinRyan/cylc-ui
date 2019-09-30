@@ -36,13 +36,15 @@ import popper from 'cytoscape-popper'
 import jquery from 'jquery'
 import SyncLoader from 'vue-spinner/src/SyncLoader.vue'
 import Tippy from 'tippy.js'
+// import VueTippy, { TippyComponent } from 'vue-tippy'
+// import Vue from 'vue'
+
 import getUuid from 'uuid-by-string'
 import VueCytoscape from '@/components/core/Cytoscape.vue'
 import { mixin } from '@/mixins/index'
 import { debounce, each, has, isEmpty, isUndefined } from 'lodash'
 // eslint-disable-next-line no-unused-vars
-// import graphservice from '@/services/graph.service'
-import { workflowService } from 'workflow-service'
+import cytoscapeService from '@/services/cytoscape.service'
 
 const QUERIES = {
   root: `
@@ -471,7 +473,7 @@ export default {
   },
 
   beforeDestroy () {
-    workflowService.unregister(this)
+    cytoscapeService.unregister(this)
   },
 
   mounted () {
@@ -485,11 +487,8 @@ export default {
 
   created (cy) {
     console.debug('CREATED')
-    // |- websocket functionality ->
-    // this.$options.sockets.onmessage = (msg) => this.messageReceived(msg)
-    // --|
     this.workflowId = this.$route.params.workflowid
-    workflowService.register(
+    cytoscapeService.register(
       this,
       {
         activeCallback: this.setActive
@@ -505,7 +504,7 @@ export default {
 
   methods: {
     subscribe (queryName) {
-      const id = workflowService.subscribe(
+      const id = cytoscapeService.subscribe(
         this,
         QUERIES[queryName].replace('WORKFLOW_ID', this.workflowId),
         this.setActive
@@ -520,7 +519,7 @@ export default {
 
     unsubscribe (queryName) {
       if (queryName in this.subscriptions) {
-        workflowService.unsubscribe(
+        cytoscapeService.unsubscribe(
           this.subscriptions[queryName].id
         )
       }
@@ -536,19 +535,25 @@ export default {
           nodes: [],
           edges: []
         }
+        // const randomElements = this.getRandomGraphData() // for dev testing only
+        // const randomNodes = randomElements.nodes
+        // const randomEdges = randomElements.edges
+
         if (!isUndefined(workflows)) {
           each(workflows, (value, key) => {
             each(value, (workflow, key) => {
               if (has(workflow.nodesEdges, 'edges') && !isUndefined(workflow.nodesEdges.edges)) {
                 elements.edges = this.getEdges(workflow.nodesEdges.edges)
+                // elements.edges = randomEdges
               }
               if (has(workflow.nodesEdges, 'nodes') && !isUndefined(workflow.nodesEdges.nodes)) {
                 elements.nodes = this.getNodes(workflow.nodesEdges.nodes)
+                // elements.nodes = randomNodes
               }
             })
           })
         }
-        // console.debug('elements ==>>>> ', elements)
+        console.debug('elements ==>>>> ', elements)
         isEmpty(elements) ? console.warn('gdata is empty or undefined') : this.graphData = elements
       } catch (error) {
         console.error('workflowUpdated error: ', error)
@@ -649,6 +654,70 @@ export default {
       }
     },
 
+    getRandomGraphData () {
+      try {
+        let i
+        const N = 100
+        const E = 500
+        const g = {
+          nodes: [],
+          edges: []
+        }
+        for (i = 0; i < N; i++) {
+          g.nodes.push({
+            data: {
+              id: `n${i}`,
+              label: `Node ${i}`,
+              // x: Math.random(),
+              // y: Math.random(),
+              size: Math.random(),
+              color: '#666',
+              state: 'undefined',
+              parent: '',
+              shape: 'ellipse',
+              runpercent: 0,
+              todo: 0,
+              running: 0
+            },
+            position: {
+
+            },
+            group: 'nodes',
+            removed: false,
+            selected: false,
+            selectable: true,
+            locked: false,
+            grabbable: true,
+            classes: ''
+          })
+        }
+        for (i = 0; i < E; i++) {
+          g.edges.push({
+            data: {
+              id: `e${i}`,
+              source: `n${Math.random() * N | 0}`,
+              target: `n${Math.random() * N | 0}`,
+              label: '',
+              size: Math.random()
+            },
+            position: {
+
+            },
+            group: 'edges',
+            removed: false,
+            selected: false,
+            selectable: true,
+            locked: false,
+            grabbable: true,
+            classes: ''
+          })
+        }
+        return g
+      } catch (error) {
+        console.error('getRandomGraphData error: ', error)
+      }
+    },
+
     changeLayout (value) {
       this.layoutName = value
     },
@@ -675,6 +744,8 @@ export default {
           elements: this.graphData
         })
         this.debouncer = debounce(this.updateGraph, 100)
+        // Vue.use(VueTippy)
+        // Vue.component('tippy', TippyComponent)
       } catch (error) {
         console.error('preConfig error: ', error)
       }
@@ -1058,13 +1129,21 @@ export default {
             tippy.hide()
           }
         })
+      } catch (error) {
+        console.error('interactivity expandcollapse.beforecollapse error ', error)
+      }
 
+      try {
         this.cy.nodes().on('expandcollapse.beforeexpand', (event) => {
           if (tippy) {
             tippy.hide()
           }
         })
+      } catch (error) {
+        console.error('interactivity expandcollapse.beforeexpand error ', error)
+      }
 
+      try {
         instance.on('tap', 'node', (event) => {
           const node = event.target
           console.debug('tapped ' + node.id(), node.data())
@@ -1126,7 +1205,11 @@ export default {
           })
           tippy.show()
         })
+      } catch (error) {
+        console.error('interactivity tippy edge error ', error)
+      }
 
+      try {
         instance.on('tap', 'edge', (event) => {
           const edge = event.target
           console.debug('tapped ' + edge.id(), edge.data())
@@ -1168,7 +1251,11 @@ export default {
           })
           tippy.show()
         })
+      } catch (error) {
+        console.error('interactivity tippy edge error ', error)
+      }
 
+      try {
         // eslint-disable-next-line no-unused-vars
         instance.on('click', (event) => {
           instance.elements().removeClass('semitransp')
@@ -1179,7 +1266,7 @@ export default {
           }
         })
       } catch (error) {
-        console.error('getInteractivity error', error)
+        console.error('interactivity tippy remove edge selection error ', error)
       }
     },
 
