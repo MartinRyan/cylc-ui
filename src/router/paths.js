@@ -43,6 +43,15 @@ export default [
     props: true
   },
   {
+    path: '/d3dagre/:workflowid',
+    view: 'D3Dagre',
+    name: i18n.t('App.d3dagre'),
+    meta: {
+      layout: 'default'
+    },
+    props: true
+  },
+  {
     path: '/workflows',
     name: i18n.t('App.workflows'),
     view: 'GScan',
