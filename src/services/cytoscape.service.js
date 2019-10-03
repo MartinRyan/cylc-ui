@@ -16,7 +16,7 @@ class CytoscapeGQueryService extends GQuery {
     if (!this.polling) {
       this.polling = setInterval(() => {
         this.request()
-      }, 9000)
+      }, 10000)
       this.request()
     }
     return ret

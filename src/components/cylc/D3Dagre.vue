@@ -27,6 +27,7 @@ import { debounce, each, has, isEmpty, isUndefined } from 'lodash'
 import d3dagreService from '@/services/d3dagre.service'
 import Tippy from 'tippy.js'
 import dagreD3 from 'dagre-d3'
+import { select } from 'd3'
 
 const STATES = Object.freeze({
   expired: { state: 'expired', icon: 'baseline-donut_large-24px.svg', colour: '#fefaff' },
@@ -73,9 +74,9 @@ const QUERIES = {
 
 let tippy
 let g
-let svg
-let inner
-let render
+// let svg
+// let inner
+// let renderer
 // let styleTooltip
 
 export default {
@@ -220,6 +221,7 @@ export default {
         console.debug('elements ==>>>> ', elements)
         if (!isEmpty(elements)) {
           this.graphData = elements
+        //   this.updateGraph(elements)
         }
       } catch (error) {
         console.error('workflowUpdated error: ', error)
@@ -275,6 +277,7 @@ export default {
             parentId = getUuid(node.parent.id)
             nodeObj.parent = parentId
           }
+          //   g.setNode(nodeObj.id, { width: 10, height: 10, label: nodeObj.label, state: nodeObj.state, runpercent: nodeObj.runpercent, todo: nodeObj.todo, parent: nodeObj.parent })
           nodesArray.push(nodeObj)
         })
         // console.debug('NODES ::: ', nodesArray)
@@ -314,6 +317,8 @@ export default {
           edgeObj.sid !== undefined || edgeObj.tid !== undefined ? edgesArray.push(edgeObj)
             : console.debug('skipping adding edge with empty source or target')
         })
+        // g.setEdge(edgeObj.id, edgeObj.source, edgeObj.target, { style: 'stroke: #f66; stroke-width: 3px;', label: edgeObj.label })
+        // g.setEdge(edgeObj.source, edgeObj.target, edgeObj.label)
         // console.debug('EDGES ::: ', edgesArray)
         return edgesArray
       } catch (error) {
@@ -329,10 +334,63 @@ export default {
         }
         if (!isEmpty(this.graphdata)) {
           console.debug('GRAPH DATA ===> ', this.graphdata)
+          const elements = this.graphData
+          //   console.debug('elements ===> ', elements)
           //   this.nodes = this.graphData.nodes
           //   this.edges = this.graphData.edges
           // TODO set edges and nodes in g
-          render(inner, g)
+          g = new dagreD3.graphlib.Graph({ multigraph: true, compound: true, directed: true })
+          const inner = select('g')
+          each(elements.nodes, (node, key) => {
+            g.setNode(node.id, { id: node.id, label: node.label, labelType: 'html' })
+          })
+          each(elements.edges, (edge, key) => {
+            // g.setEdge(edge.source, edge.target)
+            g.setEdge(edge.source, edge.target, {
+              arrowhead: 'hollowPoint',
+              arrowheadClass: 'arrowhead',
+              label: edge.label,
+              labelType: 'html',
+              lineInterpolate: 'basis',
+              //   class: val.class,
+              id: edge.id,
+              labelId: edge.id + '-label'
+            })
+          })
+          const svg = dagreD3.select('svg')
+          //   const inner = svg.append('g')
+          /* eslint new-cap: [0] */
+          const render = new dagreD3.render()
+          //   render(inner, g)
+          const l = dagreD3.layout()
+            .nodeSep(100)
+            .rankSep(200)
+            .edgeSep(80)
+            .rankDir('LR')
+          render.layout(l)
+          const zoom = dagreD3.zoom().on('zoom', function () {
+            inner.attr('transform', dagreD3.event.transform)
+          })
+          svg.call(zoom)
+          // Simple function to style the tooltip for the given node.
+          //   styleTooltip = function (name, description) {
+          //     return '<p class="name">' + name + '</p><p class="description">' + description + '</p>'
+          //   }
+          //   render(inner, g)
+          // Run the renderer. This is what draws the final graph.
+          //   const layout = render.run(g, dagreD3.select('svg g'))
+
+          render.run(g, dagreD3.select('svg g'))
+
+          //   inner.selectAll('g.node')
+          //   .attr('title', function(v) { return styleTooltip(v, g.node(v).description) })
+          //   .each(function(v) { $(this).tipsy({ gravity: 'w', opacity: 1, html: true }) })
+          //   }
+
+          // Center the graph
+          const xCenterOffset = (svg.attr('width') - g.graph().width) / 2
+          inner.attr('transform', 'translate(' + xCenterOffset + ', 20)')
+          svg.attr('height', g.graph().height + 40)
         }
       } catch (error) {
         console.error('updateGraph error: ', error)
@@ -340,11 +398,12 @@ export default {
     },
 
     initialise () {
-      g = new dagreD3.graphlib.Graph().setGraph({})
-      //   svg = d3.select('svg'),
-      inner = svg.append('g')
+      console.debug('INITIALISE')
+      g = new dagreD3.graphlib.Graph({ multigraph: true, compound: true, directed: true }).setGraph({})
+      //   svg = dagreD3.select('svg')
+      //   inner = svg.append('g')
       /* eslint new-cap: [0] */
-      render = new dagreD3.render()
+      //   render = new dagreD3.render()
       //   var zoom = d3.zoom().on('zoom', function() {
       //   inner.attr('transform', d3.event.transform)
       //   })
@@ -353,7 +412,7 @@ export default {
       //   styleTooltip = function (name, description) {
       //     return '<p class="name">' + name + '</p><p class="description">' + description + '</p>'
       //   }
-      render(inner, g)
+      //   render(inner, g)
 
     //   inner.selectAll('g.node')
     //   .attr('title', function(v) { return styleTooltip(v, g.node(v).description) })
