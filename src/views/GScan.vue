@@ -54,6 +54,7 @@
                 <v-icon small class="mr-2" @click="viewNetwork(item)">mdi-graphql</v-icon>
                 <v-icon small class="mr-2" @click="viewSigma(item)">mdi-vector-polygon</v-icon>
                 <v-icon small class="mr-2" @click="viewD3Dagre(item)">mdi-graphql</v-icon>
+                <v-icon small class="mr-2" @click="viewElgrapho(item)">mdi-vector-polyline</v-icon>
               </td>
             </template>
           </v-data-table>
@@ -165,6 +166,10 @@ export default {
 
     viewD3Dagre (workflow) {
       this.$router.push({ path: `/d3dagre/${workflow.id}` })
+    },
+
+    viewElgrapho (workflow) {
+      this.$router.push({ path: `/elgrapho/${workflow.id}` })
     },
 
     subscribe (queryName) {

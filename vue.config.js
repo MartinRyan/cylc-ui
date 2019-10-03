@@ -42,5 +42,7 @@ module.exports = {
     config.resolve.alias.set('sigma-service', sigmaService)
     const d3dagreService = '@/services/d3dagre.service'
     config.resolve.alias.set('d3dagre-service', d3dagreService)
+    const elgraphoService = '@/services/elgrapho.service'
+    config.resolve.alias.set('elgrapho-service', elgraphoService)
   }
 }

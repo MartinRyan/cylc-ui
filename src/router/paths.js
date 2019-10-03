@@ -52,6 +52,15 @@ export default [
     props: true
   },
   {
+    path: '/elgrapho/:workflowid',
+    view: 'Elgrapho',
+    name: i18n.t('App.elgrapho'),
+    meta: {
+      layout: 'default'
+    },
+    props: true
+  },
+  {
     path: '/workflows',
     name: i18n.t('App.workflows'),
     view: 'GScan',
