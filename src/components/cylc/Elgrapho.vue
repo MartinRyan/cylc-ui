@@ -13,6 +13,9 @@ import { debounce, each, has, isEmpty, isUndefined } from 'lodash'
 import elgraphoService from '@/services/elgrapho.service'
 import Tippy from 'tippy.js'
 import ElGrapho from 'elgrapho'
+import bigDecimal from 'js-big-decimal'
+import Big from 'big.js'
+import bigdecimal from 'bigdecimal'
 
 const STATES = Object.freeze({
   expired: { state: 'expired', icon: 'baseline-donut_large-24px.svg', colour: '#fefaff' },
@@ -201,6 +204,7 @@ export default {
         let nodeObj = {}
         let parentId = ''
         let todo = 0
+        let uuid
         each(nodes, (node, key) => {
           nodeObj = {
             id: '',
@@ -224,6 +228,11 @@ export default {
             classes: ''
           }
           has(node, 'id') && !isEmpty(node.id) ? nodeObj.id = getUuid(node.id) : console.warn('workflowUpdated - node id is empty')
+          // if ((node, 'id') && !isEmpty(node.id)) {
+          //   uuid = getUuid(node.id)
+          //   nodeObj.id = this.convertUniqueIdToBigDecimal(uuid)
+          //   console.log('NODE id : ' + nodeObj.id)
+          // }
           has(node, 'label') && !isEmpty(node.label) ? nodeObj.label = node.label : console.warn('workflowUpdated - node label is empty')
           has(node, 'label') && !isEmpty(node.label) ? nodeObj.name = node.label : console.warn('workflowUpdated - node label is empty')
           has(node, 'state') && !isEmpty(node.state) ? nodeObj.state = node.state : nodeObj.state = 'undefined'
@@ -245,6 +254,8 @@ export default {
             nodeObj.parent = parentId
           }
           nodesArray.push(nodeObj)
+          console.debug('raw node ::: ', node)
+          console.debug('derived node object ::: ', nodeObj)
         })
         return nodesArray
       } catch (error) {
@@ -256,11 +267,12 @@ export default {
       try {
         const edgesArray = []
         let edgeObj = {}
+        let uuid
         each(edges, (edge, key) => {
           edgeObj = {
             id: '',
-            from: '',
-            to: '',
+            from: undefined,
+            to: undefined,
             label: '',
             value: 1,
             removed: false,
@@ -272,7 +284,19 @@ export default {
           }
           has(edge, 'id') && !isEmpty(edge.id) ? edgeObj.id = getUuid(edge.id) : console.debug('workflowUpdated - edge id is empty')
           has(edge, 'source') && !isEmpty(edge.source) ? edgeObj.from = getUuid(edge.source) : edgeObj.from = undefined
+          // if (has(edge, 'source') && !isEmpty(edge.source)) {
+          //   uuid = getUuid(edge.source)
+          //   edgeObj.from = this.convertUniqueIdToBigDecimal(uuid)
+          // } else {
+          //   edgeObj.from = undefined
+          // }
           has(edge, 'target') && !isEmpty(edge.target) ? edgeObj.to = getUuid(edge.target) : edge.to = undefined
+          // if (has(edge, 'target') && !isEmpty(edge.target)) {
+          //   uuid = getUuid(edge.target)
+          //   edgeObj.to = this.convertUniqueIdToBigDecimal(uuid)
+          // } else {
+          //   edge.to = undefined
+          // }
           has(edge, 'label') && !isEmpty(edge.label) ? edgeObj.label = edge.label : edgeObj.label = ''
           edgeObj.from !== undefined || edgeObj.to !== undefined ? edgesArray.push(edgeObj)
             : console.debug('skipping adding edge with empty source or target')
@@ -297,9 +321,9 @@ export default {
             nodes: [],
             edges: []
           }
-          //   model.nodes = elements.nodes
-          //   model.edges = elements.edges
-          model =  this.getRandomGraphData()
+          model.nodes = elements.nodes
+          model.edges = elements.edges
+          model = this.getRandomGraphData()
           console.debug('MODEL:==> ', model)
           /* eslint no-unused-vars: [0] */
           const graph = new ElGrapho({
@@ -315,6 +339,37 @@ export default {
       } catch (error) {
         console.error('updateGraph error: ', error)
       }
+    },
+
+    convertUniqueIdToBigDecimal (uuid) {
+      // first strip the hyphens to get a hex string
+      const hexid = uuid.replace(/-/g, '')
+      //   const base = 10
+      // eslint-disable-next-line no-undef
+      //   let bn = BigInt('0x' + hexid)
+      //   bn = bn.toString(base)
+      //   console.debug('bn ==> ', bn)
+      //   console.debug('hexid ==> ', hexid)
+      //   const numericid = new bigDecimal(BigInt(hexid, 16))
+      //   const numericid = new bigDecimal(bn)
+      //   const decimal = new bigdecimal.BigDecimal(bn)
+      //   const bigint = new bigdecimal.BigInteger(hexid, 24)
+      //   const decimal = new bigdecimal.BigDecimal(bigint)
+      //   const bigintfromhex = new bigdecimal.BigInteger(hexid, 40)
+      //   const numericid = new bigdecimal.BigDecimal(bn)
+      //   numericid = Big(bn)
+      const biginteger = new bigdecimal.BigInteger(hexid, 24)
+      // console.debug('biginteger ==> ' + biginteger)
+      // const decimal = new bigdecimal.bigDecimal(biginteger)
+      // console.debug('decimal ==> ' + decimal)
+      // const down = bigdecimal.RoundingMode.DOWN()
+      //   console.debug('bigint ==> ', bigint)
+      //   console.debug('decimal ==> ', decimal)
+      //   console.debug('integer ==> ', integer)
+      //   console.debug('bigintfromhex ==> ', bigintfromhex)
+      const numericid = biginteger
+      console.debug('numericid ==> ' + numericid)
+      return numericid
     },
 
     getRandomGraphData () {
