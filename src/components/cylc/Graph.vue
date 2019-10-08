@@ -38,6 +38,7 @@ import SyncLoader from 'vue-spinner/src/SyncLoader.vue'
 import Tippy from 'tippy.js'
 // import VueTippy, { TippyComponent } from 'vue-tippy'
 // import Vue from 'vue'
+import nodeHtmlLabel from 'cytoscape-node-html-label'
 
 import getUuid from 'uuid-by-string'
 import VueCytoscape from '@/components/core/Cytoscape.vue'
@@ -112,7 +113,8 @@ const states = Object.freeze({
   SUBMITTED: { state: 'submitted', icon: 'outline-adjust-24px.svg', colour: '#9ef9ff' },
   SUCCEEDED: { state: 'succeeded', icon: 'outline-radio_button_unchecked-24px.svg', colour: '#31ff53' },
   WAITING: { state: 'waiting', icon: 'outline-radio_button_unchecked-24px.svg', colour: '#666' },
-  DEFAULT: { state: 'default', icon: 'baseline-donut_large-24px.svg', colour: '#555' }
+  DEFAULT: { state: 'default', icon: 'baseline-donut_large-24px.svg', colour: '#555' },
+  UNDEFINED: { state: 'UNDEFINED', icon: '', colour: '#444' }
 })
 
 const dagreOptions = {
@@ -181,7 +183,7 @@ const coseBilkentOptions = {
 
 const klayLayoutOptions = {
   name: 'klay',
-  nodeDimensionsIncludeLabels: false, // Boolean which changes whether label dimensions are included when calculating node dimensions
+  nodeDimensionsIncludeLabels: true, // Boolean which changes whether label dimensions are included when calculating node dimensions
   fit: false, // Whether to fit
   padding: 20, // Padding on fit
   animate: false, // Whether to transition the node positions
@@ -262,7 +264,7 @@ const colaLayoutOptions = {
   fit: false, // on every layout reposition of nodes, fit the viewport
   padding: 30, // padding around the simulation
   boundingBox: undefined, // constrain layout bounds; { x1, y1, x2, y2 } or { x1, y1, w, h }
-  nodeDimensionsIncludeLabels: false, // whether labels should be included in determining the space used by a node
+  nodeDimensionsIncludeLabels: true, // whether labels should be included in determining the space used by a node
   // layout event callbacks
   ready: function () {
     this.layoutReady = true
@@ -790,6 +792,11 @@ export default {
           console.debug('registering popper')
           popper(cytoscape)
         }
+
+        if (typeof cytoscape('core', 'nodeHtmlLabel') !== 'function') {
+          console.debug('registering nodeHtmlLabel')
+          nodeHtmlLabel(cytoscape)
+        }
       } catch (error) {
         console.error('registerExtensions error', error)
       }
@@ -836,7 +843,7 @@ export default {
                   !isEmpty(STATE) && !isUndefined(STATE) && STATE !== 'UNDEFINED' ? colour = states[STATE].colour : colour = states.DEFAULT.colour
                   return colour
                 },
-                content: 'data(label)',
+                // content: 'data(label)',
                 'font-family': 'Avenir, Helvetica, Arial, sans-serif',
                 color: '#333',
                 'text-max-width': '.5em',
@@ -995,6 +1002,7 @@ export default {
         this.cy = await this.getGraph(instance)
         this.getInteractivity(instance)
         this.activateKeys(instance)
+        this.setHtmlLabel(instance, states)
         return true
       } catch (error) {
         console.error('initialise error', error)
@@ -1120,6 +1128,32 @@ export default {
           }
         ]
       })
+    },
+
+    setHtmlLabel (instance, states) {
+      instance.nodeHtmlLabel([{
+        query: 'node',
+        cssClass: 'cy-title',
+        valign: 'bottom',
+        halign: 'right',
+        valignBox: 'bottom',
+        halignBox: 'right'
+      },
+      {
+        query: 'node',
+        tpl: (data) => {
+          const STATE = String(data.state).toUpperCase()
+          return '<div style="display:relative margin-top: 3em; class="cy-title"><span class="cy-title__label">' + data.label +
+          '</span><br>' +
+          '<span  class="cy-title__state">' +
+          data.state +
+          '<br></span>' +
+          '<svg width="100" height="120" viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg">' +
+          '<rect x="0" y="0" width="20" height="20" rx="4" ry="4"  stroke="" fill="' + states[STATE].colour + '" fill-opacity=".8" stroke-opacity="0.8"/>' +
+          '</div>'
+        }
+      }
+      ])
     },
 
     getInteractivity (instance) {
@@ -1365,7 +1399,10 @@ export default {
   }
 }
 </script>
-<style>
+<style lang="css">
 @import '~@/styles/cytoscape/panzoom.css';
 @import '~@/styles/cytoscape/cytoscape-custom.css';
+</style>
+<style lang="scss">
+@import '~@/styles/cytoscape/html-label.scss';
 </style>
