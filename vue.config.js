@@ -36,13 +36,5 @@ module.exports = {
       ? '@/services/mock/workflow.service.mock'
       : '@/services/workflow.service'
     config.resolve.alias.set('workflow-service', workflowService)
-    const networkService = '@/services/network.service'
-    config.resolve.alias.set('network-service', networkService)
-    const sigmaService = '@/services/sigma.service'
-    config.resolve.alias.set('sigma-service', sigmaService)
-    const d3dagreService = '@/services/d3dagre.service'
-    config.resolve.alias.set('d3dagre-service', d3dagreService)
-    const elgraphoService = '@/services/elgrapho.service'
-    config.resolve.alias.set('elgrapho-service', elgraphoService)
   }
 }

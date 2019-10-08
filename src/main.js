@@ -21,8 +21,6 @@ import store from '@/store'
 // GraphQL
 import VueApollo from 'vue-apollo'
 import apolloClient from '@/utils/graphql'
-import sigma from 'sigma'
-Vue.prototype.$sigma = sigma
 
 const apolloProvider = new VueApollo({
   defaultClient: apolloClient
